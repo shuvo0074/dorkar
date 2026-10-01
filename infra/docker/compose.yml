@@ -1,0 +1,69 @@
+name: dorkar
+
+x-service-env: &service-env
+  NODE_ENV: development
+  REDIS_URL: redis://redis:6379/0
+  LOG_LEVEL: info
+  CORS_ORIGINS: http://localhost:5173
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dorkar
+    ports: ['127.0.0.1:5433:5432']
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/10-init.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d dorkar']
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '256mb',
+        '--maxmemory-policy',
+        'noeviction',
+      ]
+    ports: ['127.0.0.1:6380:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      retries: 10
+
+  identity-migrate:
+    build: { context: ../.., dockerfile: services/identity-service/Dockerfile }
+    command: ['node', 'dist/migrate.js', 'up']
+    env_file: [../../services/identity-service/.env]
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://svc_identity:dev_identity_pw@postgres:5432/dorkar
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  identity:
+    build: { context: ../.., dockerfile: services/identity-service/Dockerfile }
+    env_file: [../../services/identity-service/.env]
+    environment:
+      <<: *service-env
+      DATABASE_URL: postgres://svc_identity:dev_identity_pw@postgres:5432/dorkar
+      REFRESH_COOKIE_SECURE: 'false'
+      SMS_FILE_PATH: /tmp/dev-sms.log
+    ports: ['127.0.0.1:4001:4001']
+    depends_on:
+      identity-migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
