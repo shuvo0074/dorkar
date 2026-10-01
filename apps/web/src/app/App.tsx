@@ -1,0 +1,53 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { lazy } from 'react';
+import { createBrowserRouter, RouterProvider } from 'react-router';
+import { AppShell } from '../components/layout/AppShell';
+import { SessionProvider } from '../features/auth/session';
+import { ApiError } from '../lib/http';
+import { I18nProvider } from '../lib/i18n';
+import HomeRoute from '../routes/HomeRoute';
+
+// Home is the landing page and stays in the main bundle (LCP); the rest load on demand.
+const SignInRoute = lazy(() => import('../routes/SignInRoute'));
+const AccountRoute = lazy(() => import('../routes/AccountRoute'));
+const NotFoundRoute = lazy(() => import('../routes/NotFoundRoute'));
+
+export const routes = [
+  {
+    element: <AppShell />,
+    children: [
+      { index: true, element: <HomeRoute /> },
+      { path: 'sign-in', element: <SignInRoute /> },
+      { path: 'account', element: <AccountRoute /> },
+      { path: '*', element: <NotFoundRoute /> },
+    ],
+  },
+];
+
+export function makeQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 30_000,
+        refetchOnWindowFocus: false,
+        // Don't hammer the API on client errors; retry transient ones once.
+        retry: (count, err) => count < 1 && !(err instanceof ApiError && err.status < 500),
+      },
+    },
+  });
+}
+
+const queryClient = makeQueryClient();
+const router = createBrowserRouter(routes);
+
+export function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <I18nProvider>
+        <SessionProvider>
+          <RouterProvider router={router} />
+        </SessionProvider>
+      </I18nProvider>
+    </QueryClientProvider>
+  );
+}

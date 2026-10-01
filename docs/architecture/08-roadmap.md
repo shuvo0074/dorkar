@@ -31,15 +31,15 @@ have a presence and matching has supply, but the UX leads with the Need.
 
 ## 3. Module-by-module plan
 
-| #   | Module                                         | Status  |
-| --- | ---------------------------------------------- | ------- |
-| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done |
-| 2   | Identity service                               | ✅ done |
-| 3   | Gateway                                        | ✅ done |
-| 4   | Profile + Verification                         | next    |
-| 5   | Catalog                                        |         |
-| 6   | Demand + Matching                              |         |
-| 7   | Offer                                          |         |
-| 8   | Transaction                                    |         |
-| 9   | Reputation, Moderation, Notification, Media    |         |
-| 10  | Web app (incrementally from module 3)          |         |
+| #   | Module                                         | Status                        |
+| --- | ---------------------------------------------- | ----------------------------- |
+| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done                       |
+| 2   | Identity service                               | ✅ done                       |
+| 3   | Gateway                                        | ✅ done                       |
+| 4   | Profile + Verification                         | next                          |
+| 5   | Catalog                                        |                               |
+| 6   | Demand + Matching                              |                               |
+| 7   | Offer                                          |                               |
+| 8   | Transaction                                    |                               |
+| 9   | Reputation, Moderation, Notification, Media    |                               |
+| 10  | Web app (incrementally from module 3)          | ✅ v1: home, sign-in, account |

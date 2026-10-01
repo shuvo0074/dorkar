@@ -12,3 +12,9 @@ var/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Web app tooling
+apps/web/.impeccable/refs/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/.impeccable/questions/
