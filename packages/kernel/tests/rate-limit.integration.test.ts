@@ -4,7 +4,9 @@ import { RedisRateLimiter } from '../src/rate-limit';
 import { TEST_REDIS_URL } from '../src/testing';
 import { randomBytes } from 'node:crypto';
 
-const redis = createRedis(TEST_REDIS_URL, `kernel-test-${randomBytes(4).toString('hex')}`);
+const redis = createRedis(TEST_REDIS_URL, {
+  keyPrefix: `kernel-test-${randomBytes(4).toString('hex')}`,
+});
 let now = 1_000_000;
 const limiter = new RedisRateLimiter(redis, () => now);
 let k: string;

@@ -61,9 +61,15 @@ sequenceDiagram
   sessions.
 - Gateway and services verify JWTs locally with the JWKS from identity
   (`/.well-known/jwks.json`), cached; key rotation by `kid`.
-- Session revocation propagates within the access-token TTL (10 min). For
-  immediate cut-off on bans, identity publishes `AccountStatusChanged` and
-  the gateway keeps a short-TTL Redis denylist of `sid`s.
+- **Immediate revocation at the edge** (ADR-0007): identity publishes
+  `SessionRevoked` (logout, refresh-token reuse), `DeviceRevoked`,
+  `AccountSessionsRevoked` (logout-all) and `AccountStatusChanged` (ban/suspend).
+  The gateway consumes them into a Redis denylist keyed by `sid`, `did` and
+  account (`iat` cut-off) that lives one access-token TTL. Measured cut-off
+  after logout: ~0.3 s. If Redis is unavailable the check fails _open_
+  (signatures are still verified; worst case = the 10-minute TTL). A token
+  minted in the same second as a logout-all/ban survives the account cut-off;
+  its session is already revoked in identity, so it cannot be refreshed.
 - **CSRF**: refresh/logout endpoints are cookie-authenticated → require
   `SameSite=Strict` cookie **and** a custom header `X-Requested-With: dorkar`
   **and** an `Origin` allowlist check. All other APIs use `Authorization:

@@ -246,12 +246,11 @@ dorkar/
         config/
       migrations/
       tests/
-      Dockerfile
   packages/
     kernel/              platform kit: config, logger, errors, HTTP bootstrap, db, outbox, idempotency, audit, rate limit
     contracts/           event envelope + event payload schemas, shared enums, error codes
   infra/
-    docker/              compose files, postgres init (schemas + roles)
+    docker/              compose, shared service.Dockerfile, postgres init (schemas + roles)
     k6/                  load tests
     backup/              backup/restore scripts
   docs/

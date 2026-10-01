@@ -20,6 +20,7 @@ export const ErrorCodes = {
   RATE_LIMITED: 429,
   INTERNAL: 500,
   UNAVAILABLE: 503,
+  UPSTREAM_TIMEOUT: 504,
 } as const;
 
 export type ErrorCode = keyof typeof ErrorCodes;

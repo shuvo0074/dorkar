@@ -42,7 +42,7 @@ implementation → run tests → security review → performance review → refa
 
 1. **Platform kernel** + local infra (Postgres, Redis, compose, CI) ✅
 2. **Identity service** (phone + OTP, sessions, devices) ✅
-3. Gateway (edge auth, routing, rate limits)
+3. **Gateway** (edge auth, immediate revocation, routing, rate limits) ✅
 4. Profile + Verification (policy engine)
 5. Catalog (categories, attribute schemas, listings, search)
 6. Demand (Needs) + Matching (rule-based)

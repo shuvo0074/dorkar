@@ -85,7 +85,10 @@ export async function createHttpServer(opts: HttpServerOptions): Promise<App> {
 
   const app = Fastify({
     loggerInstance: logger,
-    trustProxy: config.TRUST_PROXY,
+    // Trust exactly N hops (proxy-addr semantics: hop index 0 is the closest proxy).
+    ...(config.TRUST_PROXY === false
+      ? {}
+      : { trustProxy: (_addr: string, hop: number) => hop < (config.TRUST_PROXY as number) }),
     bodyLimit: 256 * 1024,
     logController: new LogController({
       disableRequestLogging: true,

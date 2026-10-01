@@ -35,8 +35,8 @@ have a presence and matching has supply, but the UX leads with the Need.
 | --- | ---------------------------------------------- | ------- |
 | 1   | Platform kernel, repo tooling, local infra, CI | ✅ done |
 | 2   | Identity service                               | ✅ done |
-| 3   | Gateway                                        | next    |
-| 4   | Profile + Verification                         |         |
+| 3   | Gateway                                        | ✅ done |
+| 4   | Profile + Verification                         | next    |
 | 5   | Catalog                                        |         |
 | 6   | Demand + Matching                              |         |
 | 7   | Offer                                          |         |

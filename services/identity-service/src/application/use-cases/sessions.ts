@@ -24,6 +24,14 @@ export class Logout {
           targetType: 'session',
           targetId: actor.sessionId,
         });
+        await r.outbox(
+          event(
+            IdentityEvents.SessionRevoked,
+            actor.id,
+            { accountId: actor.id, sessionId: actor.sessionId, reason: 'LOGOUT' },
+            ctx,
+          ),
+        );
       }
     });
   }
@@ -42,6 +50,14 @@ export class LogoutAll {
         targetId: actor.id,
         metadata: { revokedSessions },
       });
+      await r.outbox(
+        event(
+          IdentityEvents.AccountSessionsRevoked,
+          actor.id,
+          { accountId: actor.id, revokedBefore: new Date().toISOString(), reason: 'LOGOUT_ALL' },
+          ctx,
+        ),
+      );
       return { revokedSessions };
     });
   }

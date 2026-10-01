@@ -33,7 +33,13 @@ await runService({
   logger,
   graceMs: config.SHUTDOWN_GRACE_MS,
   closers: [
-    { name: 'redis', close: async () => svc.redis.disconnect() },
+    {
+      name: 'redis',
+      close: async () => {
+        svc.redis.disconnect();
+        svc.bus.disconnect();
+      },
+    },
     { name: 'postgres', close: () => svc.database.close() },
     { name: 'workers', close: () => svc.stopWorkers() },
   ],

@@ -1,7 +1,7 @@
 // Bundles a service (and its workspace packages) into dist/ with esbuild.
 // Third-party dependencies stay external and are installed by `pnpm deploy --prod`.
 import { build } from 'esbuild';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const cwd = process.cwd();
@@ -23,12 +23,18 @@ if (missing.length) {
   process.exit(1);
 }
 
+// main + whichever CLIs the service has, each bundled to dist/<name>.js.
+const candidates = {
+  main: 'src/main.ts',
+  migrate: 'src/cli/migrate.ts',
+  'grant-role': 'src/cli/grant-role.ts',
+};
+const entryPoints = Object.fromEntries(
+  Object.entries(candidates).filter(([, path]) => existsSync(resolve(cwd, path))),
+);
+
 await build({
-  entryPoints: {
-    main: 'src/main.ts',
-    migrate: 'src/cli/migrate.ts',
-    'grant-role': 'src/cli/grant-role.ts',
-  },
+  entryPoints,
   outdir: 'dist',
   bundle: true,
   platform: 'node',

@@ -37,3 +37,10 @@ Short, immutable records. Supersede rather than edit.
 
 **Status**: accepted
 **Decision**: time-ordered UUIDs give index locality like bigserial, are safe to expose publicly, survive data moves between clusters, and let us generate IDs before insert (outbox payloads, idempotent creates).
+
+## ADR-0007 — Immediate token revocation at the gateway via identity events
+
+**Status**: accepted · 2026-10-01
+**Context**: access tokens are verified offline (ADR-0004), so logout, device revocation and bans only took effect when the token expired (≤ 10 min). Checking every request against identity would make identity a synchronous dependency of all traffic.
+**Decision**: identity emits revocation events through its outbox; the gateway consumes them (Redis Streams consumer group) into a Redis denylist keyed by session, device and account (`iat` cut-off), each entry living one access-token TTL. The gateway rejects denylisted tokens with `SESSION_REVOKED`. Services keep verifying signatures themselves.
+**Consequences**: cut-off in well under a second without a per-request call to identity. The denylist is bounded (only revocations within the last TTL). On Redis loss the check fails open and degrades to the old TTL bound. Services must only be reachable through the gateway.

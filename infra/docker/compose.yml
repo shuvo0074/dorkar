@@ -43,7 +43,10 @@ services:
       retries: 10
 
   identity-migrate:
-    build: { context: ../.., dockerfile: services/identity-service/Dockerfile }
+    build: &identity-build
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: identity-service, PACKAGE: '@dorkar/identity-service' }
     command: ['node', 'dist/migrate.js', 'up']
     env_file: [../../services/identity-service/.env]
     environment:
@@ -53,7 +56,7 @@ services:
       postgres: { condition: service_healthy }
 
   identity:
-    build: { context: ../.., dockerfile: services/identity-service/Dockerfile }
+    build: *identity-build
     env_file: [../../services/identity-service/.env]
     environment:
       <<: *service-env
@@ -63,6 +66,22 @@ services:
     ports: ['127.0.0.1:4001:4001']
     depends_on:
       identity-migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  gateway:
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: gateway, PACKAGE: '@dorkar/gateway' }
+    env_file: [../../services/gateway/.env]
+    environment:
+      <<: *service-env
+      PORT: '4000'
+      UPSTREAM_IDENTITY_URL: http://identity:4001
+      TRUST_PROXY: '1'
+    ports: ['127.0.0.1:4000:4000']
+    depends_on:
+      identity: { condition: service_started }
       redis: { condition: service_healthy }
 
 volumes:

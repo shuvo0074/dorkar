@@ -56,4 +56,16 @@ export const IdentityEvents = {
       reason: z.string(),
     }),
   },
+  /** One session ended (logout, refresh-token reuse). Edge denylists its `sid`. */
+  SessionRevoked: {
+    type: 'identity.SessionRevoked',
+    version: 1,
+    schema: z.object({ accountId: z.uuid(), sessionId: z.uuid(), reason: z.string() }),
+  },
+  /** Every session issued before `revokedBefore` is dead (logout-all). Edge denylists by account. */
+  AccountSessionsRevoked: {
+    type: 'identity.AccountSessionsRevoked',
+    version: 1,
+    schema: z.object({ accountId: z.uuid(), revokedBefore: z.iso.datetime(), reason: z.string() }),
+  },
 } as const;

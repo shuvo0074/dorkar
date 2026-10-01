@@ -45,7 +45,10 @@ export interface IdentityOverrides {
 export interface IdentityService {
   app: App;
   database: Database<IdentityDB>;
+  /** Service-private keys (rate limits). */
   redis: Redis;
+  /** Unprefixed connection for the shared event bus. */
+  bus: Redis;
   /** Background workers (outbox relay, retention purge). */
   startWorkers(): void;
   stopWorkers(): Promise<void>;
@@ -59,7 +62,8 @@ export async function buildIdentityService(
   overrides: IdentityOverrides = {},
 ): Promise<IdentityService> {
   const database = createDatabase<IdentityDB>(config);
-  const redis = createRedis(config.REDIS_URL, 'identity', logger);
+  const redis = createRedis(config.REDIS_URL, { keyPrefix: 'identity', logger });
+  const bus = createRedis(config.REDIS_URL, { keyPrefix: null, logger });
   const clock: Clock = overrides.clock ?? { now: () => new Date() };
 
   const tokens = await JoseTokenService.create(
@@ -147,7 +151,7 @@ export async function buildIdentityService(
     allowedOrigins: config.CORS_ORIGINS,
   });
 
-  const relay = new OutboxRelay(database.db, new RedisStreamPublisher(redis, 'identity'), logger, {
+  const relay = new OutboxRelay(database.db, new RedisStreamPublisher(bus, 'identity'), logger, {
     producer: 'identity',
   });
   let purgeJob: PeriodicJob | null = null;
@@ -161,6 +165,7 @@ export async function buildIdentityService(
     app,
     database,
     redis,
+    bus,
     stopWorkers,
     startWorkers() {
       if (config.OUTBOX_RELAY_ENABLED) relay.start();
@@ -178,6 +183,7 @@ export async function buildIdentityService(
       await app.close();
       await stopWorkers();
       redis.disconnect();
+      bus.disconnect();
       await database.close();
     },
   };

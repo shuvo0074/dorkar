@@ -94,12 +94,12 @@ describe('login', () => {
 
     const relay = new OutboxRelay(
       h.svc.database.db,
-      new RedisStreamPublisher(h.svc.redis, 'identity'),
+      new RedisStreamPublisher(h.svc.bus, 'identity'),
       h.svc.app.log as unknown as Logger,
       { producer: 'identity' },
     );
     while ((await relay.tick()) > 0);
-    const entries = await h.svc.redis.xrevrange(eventStreamFor('identity'), '+', '-', 'COUNT', 50);
+    const entries = await h.svc.bus.xrevrange(eventStreamFor('identity'), '+', '-', 'COUNT', 50);
     const events = entries.map(([, fields]) => JSON.parse(fields[3]!));
     const mine = events.filter((e) => e.aggregateId === s.accountId).map((e) => e.type);
     expect(mine).toEqual(
@@ -170,6 +170,48 @@ describe('refresh token rotation', () => {
 
   it('rejects unknown refresh tokens', async () => {
     expect((await refresh('x'.repeat(43))).statusCode).toBe(401);
+  });
+});
+
+describe('revocation events (consumed by the gateway for immediate cut-off)', () => {
+  const eventsFor = (accountId: string) =>
+    h.svc.database.db
+      .selectFrom('outbox')
+      .select(['type', 'payload'])
+      .where('aggregate_id', '=', accountId)
+      .orderBy('occurred_at')
+      .execute();
+
+  it('logout emits SessionRevoked; logout-all emits AccountSessionsRevoked', async () => {
+    const phone = randomPhone();
+    const a = await login(h, phone);
+    await h.inject({ method: 'POST', url: '/api/v1/auth/logout', headers: bearer(a.accessToken) });
+    await new Promise((r) => setTimeout(r, 1_050));
+    const b = await login(h, phone);
+    await h.inject({
+      method: 'POST',
+      url: '/api/v1/auth/logout-all',
+      headers: bearer(b.accessToken),
+    });
+
+    const events = await eventsFor(a.accountId);
+    expect(events.find((e) => e.type === 'identity.SessionRevoked')?.payload).toMatchObject({
+      reason: 'LOGOUT',
+    });
+    const all = events.find((e) => e.type === 'identity.AccountSessionsRevoked');
+    expect(all?.payload).toMatchObject({ accountId: a.accountId, reason: 'LOGOUT_ALL' });
+  });
+
+  it('refresh-token reuse emits SessionRevoked once', async () => {
+    const s = await login(h);
+    await refresh(s.refreshCookie);
+    await refresh(s.refreshCookie);
+    await refresh(s.refreshCookie);
+    const revoked = (await eventsFor(s.accountId)).filter(
+      (e) => e.type === 'identity.SessionRevoked',
+    );
+    expect(revoked).toHaveLength(1);
+    expect(revoked[0]!.payload).toMatchObject({ reason: 'REFRESH_TOKEN_REUSE' });
   });
 });
 

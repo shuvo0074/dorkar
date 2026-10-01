@@ -24,6 +24,8 @@ cp services/identity-service/.env.example services/identity-service/.env
 pnpm --filter @dorkar/identity-service keys:generate >> services/identity-service/.env
 pnpm --filter @dorkar/identity-service migrate up
 pnpm --filter @dorkar/identity-service dev       # http://localhost:4001/docs
+cp services/gateway/.env.example services/gateway/.env   # then set PII_HASH_KEY
+pnpm --filter @dorkar/gateway dev                # public entry point: http://localhost:4000
 ```
 
 In development, OTP SMS messages are appended to `services/identity-service/var/dev-sms.log`

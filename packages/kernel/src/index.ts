@@ -16,3 +16,4 @@ export * from './outbox/relay';
 export * from './outbox/redis-stream-publisher';
 export * from './http/server';
 export * from './http/auth';
+export * from './outbox/redis-stream-consumer';

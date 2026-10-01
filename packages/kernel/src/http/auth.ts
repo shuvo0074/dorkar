@@ -9,6 +9,8 @@ export interface AccessTokenClaims {
   sid: string;
   did: string;
   roles: Role[];
+  /** Issued-at, epoch seconds (used for account-wide revocation cut-offs). */
+  iat: number;
 }
 
 /** Port: identity verifies with its own key; other services with the JWKS endpoint. */
@@ -32,17 +34,18 @@ export function createJwtVerifier(opts: {
           algorithms: ['EdDSA'],
           clockTolerance: 5,
         });
-        const { sub, sid, did, roles } = payload as Record<string, unknown>;
+        const { sub, sid, did, roles, iat } = payload as Record<string, unknown>;
         if (
           typeof sub !== 'string' ||
           typeof sid !== 'string' ||
           typeof did !== 'string' ||
+          typeof iat !== 'number' ||
           !Array.isArray(roles) ||
           !roles.every((r) => typeof r === 'string' && ROLE_SET.has(r))
         ) {
           throw new Error('malformed claims');
         }
-        return { sub, sid, did, roles: roles as Role[] };
+        return { sub, sid, did, iat, roles: roles as Role[] };
       } catch {
         throw Errors.unauthenticated('Invalid or expired access token.');
       }

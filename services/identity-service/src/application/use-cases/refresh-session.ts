@@ -1,8 +1,8 @@
-import type { Role } from '@dorkar/contracts';
+import { IdentityEvents, type Role } from '@dorkar/contracts';
 import { AppError, Errors, uuidv7, type RequestContext } from '@dorkar/kernel';
 import { canAuthenticate, effectiveRoles } from '../../domain/account';
 import { hashRefreshToken, newRefreshToken, refreshExpiry } from '../../domain/session';
-import type { IdentityDeps } from '../deps';
+import { event, type IdentityDeps } from '../deps';
 
 export interface RefreshedSession {
   accountId: string;
@@ -48,6 +48,20 @@ export class RefreshSession {
           targetId: row.sessionId,
           metadata: { sessionWasActive: wasActive },
         });
+        if (wasActive) {
+          await r.outbox(
+            event(
+              IdentityEvents.SessionRevoked,
+              session.accountId,
+              {
+                accountId: session.accountId,
+                sessionId: row.sessionId,
+                reason: 'REFRESH_TOKEN_REUSE',
+              },
+              ctx,
+            ),
+          );
+        }
         return { kind: 'revoked' as const };
       }
       if (session.revokedAt || session.expiresAt <= now || row.expiresAt <= now) {

@@ -27,7 +27,17 @@ export const baseEnvSchema = z.object({
 
   REDIS_URL: z.url({ protocol: /^rediss?$/ }),
 
-  TRUST_PROXY: bool.default(false),
+  /**
+   * Number of reverse-proxy hops to trust for X-Forwarded-For (`false`/0 = none). Never "all":
+   * with an appending proxy, trusting every hop lets clients spoof their IP.
+   */
+  TRUST_PROXY: z
+    .string()
+    .regex(/^(true|false|\d+)$/)
+    .transform((v): number | false =>
+      v === 'false' || v === '0' ? false : v === 'true' ? 1 : Number(v),
+    )
+    .default(false),
   CORS_ORIGINS: csv.default([]),
   API_DOCS_ENABLED: bool.optional(),
   SHUTDOWN_GRACE_MS: z.coerce.number().int().min(0).default(10_000),
