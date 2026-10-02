@@ -1,4 +1,5 @@
 import {
+  BiddingEvents,
   CatalogEvents,
   MatchingEvents,
   ModerationEvents,
@@ -100,9 +101,27 @@ export async function buildDemandService(
       await needs.onOfferCancelled(pgNeedStore(trx), p.offerId, eventContext(e));
     }
   });
+  // A reverse auction's award is an acceptance like an accepted offer, keyed by the auction id.
+  runtime.on(BiddingEvents.AuctionAwarded, async (p, e, trx) => {
+    if (p.kind === 'REVERSE' && p.needId) {
+      await needs.onOfferAccepted(
+        pgNeedStore(trx),
+        { offerId: p.auctionId, needId: p.needId, quantity: p.quantity },
+        eventContext(e),
+      );
+    }
+  });
   runtime.on(TransactionEvents.TransactionStateChanged, async (p, e, trx) => {
     if (p.to === 'COMPLETED' && p.needId && p.sourceType === 'OFFER') {
       await needs.onTransactionCompleted(pgNeedStore(trx), p.sourceId, eventContext(e));
+    }
+    // Offer-sourced cancellations arrive as OfferStatusChanged; auction-sourced ones only here.
+    if (p.needId && p.sourceType === 'AUCTION') {
+      if (p.to === 'COMPLETED') {
+        await needs.onTransactionCompleted(pgNeedStore(trx), p.sourceId, eventContext(e));
+      } else if (p.to === 'CANCELLED' || p.to === 'EXPIRED' || p.to === 'REFUNDED') {
+        await needs.onOfferCancelled(pgNeedStore(trx), p.sourceId, eventContext(e));
+      }
     }
   });
   runtime.on(ModerationEvents.ContentModerated, async (p, e, trx) => {

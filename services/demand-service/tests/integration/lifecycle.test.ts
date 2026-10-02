@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import {
+  BiddingEvents,
   DemandEvents,
   ModerationEvents,
   OfferEvents,
@@ -429,6 +430,61 @@ describe('moderation', () => {
       }),
     );
     expect((await row(n.id)).status).toBe('PAUSED');
+  });
+});
+
+describe('reverse auctions', () => {
+  const award = (needId: string, buyerId: string, quantity: number) => ({
+    auctionId: randomUUID(),
+    winningBidId: randomUUID(),
+    kind: 'REVERSE' as const,
+    needId,
+    listingId: null,
+    buyerId,
+    sellerId: randomUUID(),
+    mode: 'SOURCE' as const,
+    amount: { amount: 5_000_000, currency: 'BDT' as const },
+    quantity,
+    terms: {},
+  });
+  const txn = (a: ReturnType<typeof award>, to: 'COMPLETED' | 'CANCELLED') =>
+    envelope(TransactionEvents.TransactionStateChanged, {
+      transactionId: randomUUID(),
+      needId: a.needId,
+      sourceType: 'AUCTION',
+      sourceId: a.auctionId,
+      buyerId: a.buyerId,
+      sellerId: a.sellerId,
+      from: 'CONFIRMED',
+      to,
+      actorId: null,
+    });
+
+  it('an award fulfils the need; cancelling the deal reopens it; completing fulfils it', async () => {
+    const owner = randomUUID();
+    const n = await createNeed(owner, { quantity: 1 });
+    const a = award(n.id, owner, 1);
+    const awarded = envelope(BiddingEvents.AuctionAwarded, a);
+    await rt().deliver(awarded);
+    expect(await rt().deliver(awarded)).toBe(false);
+    expect(await row(n.id)).toMatchObject({ status: 'FULFILLING', accepted_quantity: 1 });
+
+    await rt().deliver(txn(a, 'CANCELLED'));
+    expect(await row(n.id)).toMatchObject({ status: 'OPEN', accepted_quantity: 0 });
+
+    const b = award(n.id, owner, 1);
+    await rt().deliver(envelope(BiddingEvents.AuctionAwarded, b));
+    await rt().deliver(txn(b, 'COMPLETED'));
+    expect((await row(n.id)).status).toBe('FULFILLED');
+  });
+
+  it('ignores forward auctions', async () => {
+    const owner = randomUUID();
+    const n = await createNeed(owner, { quantity: 1 });
+    await rt().deliver(
+      envelope(BiddingEvents.AuctionAwarded, { ...award(n.id, owner, 1), kind: 'FORWARD' }),
+    );
+    expect(await row(n.id)).toMatchObject({ status: 'OPEN', accepted_quantity: 0 });
   });
 });
 
