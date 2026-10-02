@@ -47,17 +47,17 @@ have a presence and matching has supply, but the UX leads with the Need.
 
 Phase 2 status:
 
-| Item                                                             | Status                                                     |
-| ---------------------------------------------------------------- | ---------------------------------------------------------- |
-| Bidding (reverse auctions on needs, forward on listings)         | ✅                                                         |
-| Rental with availability calendar                                | ✅                                                         |
-| Lending                                                          | ✅                                                         |
-| In-app messaging (context-bound, numbers hidden)                 | ✅                                                         |
-| Dispute service                                                  | ✅                                                         |
-| Push notifications (FCM, behind a port)                          | ✅ (FCM untested against Google)                           |
-| Admin dashboard + cross-service activity log, personal dashboard | ✅ (ADR-0010)                                              |
-| Observability stack                                              | see 07-operations §4                                       |
-| Search engine                                                    | not needed yet: Postgres FTS per service is within targets |
+| Item                                                             | Status                                                           |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Bidding (reverse auctions on needs, forward on listings)         | ✅                                                               |
+| Rental with availability calendar                                | ✅                                                               |
+| Lending                                                          | ✅                                                               |
+| In-app messaging (context-bound, numbers hidden)                 | ✅                                                               |
+| Dispute service                                                  | ✅                                                               |
+| Push notifications (FCM, behind a port)                          | ✅ (FCM untested against Google)                                 |
+| Admin dashboard + cross-service activity log, personal dashboard | ✅ (ADR-0010)                                                    |
+| Observability stack                                              | ✅ Prometheus metrics, trace context, Grafana (OTel export next) |
+| Search engine                                                    | not needed yet: Postgres FTS per service is within targets       |
 
 Known follow-ups: S3 media storage and a production SMS provider (both behind ports, untested
 against real vendors); a `MediaDeleted` event; category deactivation cascading to listings;
