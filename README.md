@@ -24,6 +24,12 @@ Architecture, decisions and roadmap: [docs/README.md](docs/README.md). Rules for
 | `services/reputation-service`   | 4010 | Reviews after completed deals, trust signals                                                                             |
 | `services/moderation-service`   | 4011 | Reports, moderation actions                                                                                              |
 | `services/notification-service` | 4012 | Event-driven in-app notifications and SMS                                                                                |
+| `services/bidding-service`      | 4013 | Forward and reverse auctions, atomic bids, anti-sniping, awards                                                          |
+| `services/rental-service`       | 4014 | Availability calendars, rental terms, holds and booking approval (no double-booking)                                     |
+| `services/lending-service`      | 4015 | Lend items, trust-gated borrow requests, loan history                                                                    |
+| `services/dispute-service`      | 4016 | Dispute cases: statements, evidence, deadlines, staff resolution                                                         |
+| `services/messaging-service`    | 4017 | Context-bound conversations, long-poll delivery, blocking; numbers stay private                                          |
+| `services/dashboard-service`    | 4018 | Admin dashboard: metrics, cross-service activity log; personal dashboard                                                 |
 | `infra/`                        |      | Docker Compose (generated), Postgres bootstrap, backup/restore scripts, k6 load tests                                    |
 
 ## Local development
@@ -33,15 +39,17 @@ Requirements: Node ≥ 24, pnpm 10, local Postgres ≥ 14 and Redis ≥ 7.
 ```bash
 pnpm install
 pnpm dev:setup      # once (idempotent): .env.dev secrets, database, per-service schemas/roles, migrations
-pnpm dev:backend    # all 12 services + gateway with labelled logs; public API at http://localhost:4000
+pnpm dev:backend    # all 18 services + gateway with labelled logs; public API at http://localhost:4000
 pnpm e2e:backend    # in another terminal: the full loop — sign-in → need → match → offer → deal → review
+pnpm e2e:phase2     # auctions, rentals, lending, messaging, disputes, dashboard, push
 ```
 
 `dev:setup` uses `DATABASE_URL` (admin connection, default `postgres://localhost:5432/dorkar`) and
 `REDIS_URL` (default `redis://localhost:6379/0`). `pnpm dev:backend profile demand` starts only those
 services plus the gateway. Each service also serves OpenAPI docs at `http://localhost:<port>/docs`.
 
-In development, OTP SMS messages are appended to `var/dev-sms.log` (never to the application log).
+In development, OTP SMS messages are appended to `var/dev-sms.log` (never to the application log)
+and push notifications to `var/dev-push.log`.
 
 Bootstrap the first admin:
 `pnpm --filter @dorkar/identity-service grant-role 017XXXXXXXX SUPER_ADMIN` (with `.env.dev` values in the environment).

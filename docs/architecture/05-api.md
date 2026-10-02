@@ -181,11 +181,84 @@ Content-Type: application/json
 | `POST /api/v1/media/:id/complete`                           | U                          | triggers sniff/scan/process                           |
 | `GET /api/v1/media/:id`                                     | per visibility             | signed GET URL                                        |
 
-### Phase 2 (designed)
+## 3. Phase 2 endpoints
 
-`POST /api/v1/auctions`, `POST /api/v1/auctions/:id/bids` **(idem)**,
-`GET /api/v1/bids/:id`, `GET /api/v1/auctions/:id/bids`;
-`POST /api/v1/rentals/:listingId/bookings` **(idem)**,
-`GET /api/v1/rentals/:listingId/availability?from&to`;
-`POST /api/v1/loans`, `POST /api/v1/loans/:id/return`;
-`POST /api/v1/disputes`; `GET/POST /api/v1/conversations…`.
+Every command `POST` takes an `Idempotency-Key` **(idem)**. Live OpenAPI at `/docs` on each service is the precise contract.
+
+### Transactions (additions)
+
+| Method & path                                                                                     | Auth                   | Notes                                                               |
+| ------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `POST /api/v1/transactions/:id/hand-over` · `…/report-return` · `…/confirm-return` · `…/complete` | U (party, RENT/BORROW) | hand-over/return sub-flow **(idem)**                                |
+| `POST /api/v1/transactions/:id/dispute`                                                           | U (party)              | `{ reason, category? }`; opens a dispute case (ADR-0009) **(idem)** |
+
+Deals are also created from `AuctionAwarded`, `BookingConfirmed` and `LoanApproved` (ADR-0008). The admin resolve endpoint is gone: resolution happens in the dispute service.
+
+### Bidding
+
+| Method & path                                                | Auth                                         | Notes                                                                      |
+| ------------------------------------------------------------ | -------------------------------------------- | -------------------------------------------------------------------------- |
+| `POST /api/v1/auctions`                                      | P:`auction:create` + policy `AUCTION_CREATE` | FORWARD on own PRODUCT listing, REVERSE on own SOURCE/BUY need **(idem)**  |
+| `GET /api/v1/auctions` · `GET …/:id` · `GET …/:id/bids`      | —                                            | public; bidders shown as aliases; reserve price hidden (`reserveMet` only) |
+| `POST /api/v1/auctions/:id/bids`                             | P:`bid:create` + policy `BID_PLACE`          | atomic under row lock, DB clock, anti-sniping **(idem)**                   |
+| `POST /api/v1/auctions/:id/bids/:bidId/retract` · `…/cancel` | U (bidder / owner)                           | **(idem)**                                                                 |
+| `GET /api/v1/me/auctions` · `GET /api/v1/me/bids`            | U                                            |                                                                            |
+| `GET /api/v1/admin/auctions` · `POST …/:id/cancel`           | P:`auction:manage`                           |                                                                            |
+
+### Rental
+
+| Method & path                                                                    | Auth                                         | Notes                                                              |
+| -------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| `GET/PUT /api/v1/listings/:listingId/rental-terms`                               | — / U (owner)                                | instant book, durations, deposit, notice, buffer                   |
+| `GET /api/v1/listings/:listingId/availability?from&to`                           | —                                            | busy intervals only                                                |
+| `GET/POST /api/v1/listings/:listingId/availability/blocks` · `DELETE …/:blockId` | U (owner)                                    |                                                                    |
+| `POST /api/v1/bookings`                                                          | P:`booking:create` + policy `BOOKING_CREATE` | HELD (instant book) or PENDING_APPROVAL; 409 on overlap **(idem)** |
+| `POST /api/v1/bookings/:id/confirm` · `…/approve` · `…/decline` · `…/cancel`     | U (renter / owner)                           | **(idem)**                                                         |
+| `GET /api/v1/bookings/:id` · `GET /api/v1/me/bookings`                           | U (party)                                    |                                                                    |
+| `GET /api/v1/admin/bookings`                                                     | P:`transaction:read:any`                     |                                                                    |
+
+### Lending
+
+| Method & path                                                                | Auth                                                    | Notes                                               |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------- | --------------------------------------------------- |
+| `POST /api/v1/lend-items` · `PATCH …/:id` · `POST …/:id/deactivate`          | P:`lending:create` + policy `LEND_ITEM_PUBLISH` / owner | **(idem)**                                          |
+| `GET /api/v1/lend-items` · `GET …/:id`                                       | —                                                       | search; requirements and lender stats               |
+| `GET /api/v1/me/lend-items`                                                  | U                                                       |                                                     |
+| `POST /api/v1/loans`                                                         | U + policy `LOAN_REQUEST`                               | trust gate → 422 `BORROWER_NOT_ELIGIBLE` **(idem)** |
+| `POST /api/v1/loans/:id/approve` · `…/decline` · `…/cancel`                  | U (lender / borrower)                                   | 409 on overlapping approved loans **(idem)**        |
+| `GET /api/v1/loans/:id` · `GET /api/v1/me/loans` · `GET /api/v1/admin/loans` | U (party) / P:`transaction:read:any`                    |                                                     |
+
+### Disputes
+
+| Method & path                                                       | Auth                         | Notes                                                |
+| ------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------- |
+| `GET /api/v1/disputes/:id` · `GET /api/v1/me/disputes`              | U (party) / P:`dispute:read` | merged timeline; internal notes staff-only           |
+| `POST /api/v1/disputes/:id/statement` · `…/evidence` · `…/withdraw` | U (party)                    | **(idem)**                                           |
+| `GET /api/v1/admin/disputes` · `POST …/:id/assign` · `…/notes`      | P:`dispute:read`             |                                                      |
+| `POST /api/v1/admin/disputes/:id/request-info` · `…/resolve`        | P:`dispute:resolve`          | RELEASE / CANCEL / REFUND (non-cash only) **(idem)** |
+
+### Messaging
+
+| Method & path                                               | Auth                     | Notes                                                                         |
+| ----------------------------------------------------------- | ------------------------ | ----------------------------------------------------------------------------- |
+| `POST /api/v1/conversations`                                | U                        | `{ contextType, contextId }` get-or-create; participants derived from context |
+| `GET /api/v1/conversations` · `GET …/:id`                   | U (participant)          |                                                                               |
+| `GET /api/v1/conversations/:id/messages?before\|after&wait` | U (participant)          | history, or long poll (≤ 8 s)                                                 |
+| `POST /api/v1/conversations/:id/messages` · `…/read`        | P:`message:send`         | contact info rejected; `clientId` dedupe; rate limited                        |
+| `GET/POST /api/v1/me/blocked-users` · `DELETE …/:userId`    | U                        |                                                                               |
+| `GET /api/v1/admin/messages/:id`                            | P:`moderation:case:read` | audited                                                                       |
+
+### Notifications (additions)
+
+| Method & path                                                     | Auth | Notes                                  |
+| ----------------------------------------------------------------- | ---- | -------------------------------------- |
+| `GET/POST /api/v1/me/notifications/push-devices` · `DELETE …/:id` | U    | FCM / web push tokens                  |
+| `GET/PUT /api/v1/me/notifications/preferences`                    | U    | per type × channel (in-app, push, SMS) |
+
+### Dashboard (ADR-0010)
+
+| Method & path                                                                | Auth               | Notes                                             |
+| ---------------------------------------------------------------------------- | ------------------ | ------------------------------------------------- |
+| `GET /api/v1/admin/activity` · `GET …/:id` · `GET …/facets` · `GET …/export` | P:`audit:read`     | cross-service activity log; CSV export is audited |
+| `GET /api/v1/admin/dashboard/summary` · `…/timeseries` · `…/funnel`          | P:`dashboard:read` |                                                   |
+| `GET /api/v1/me/dashboard` · `GET /api/v1/me/activity?scope=mine\|about-me`  | U                  |                                                   |
