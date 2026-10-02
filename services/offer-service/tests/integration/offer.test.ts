@@ -497,6 +497,7 @@ describe('exclusive acceptance', () => {
     const codes = [ra.statusCode, rb.statusCode].sort();
     expect(codes).toEqual([200, 409]);
     const loser = ra.statusCode === 409 ? ra : rb;
+    expect(loser.json().error.code).toBe('NEED_QUANTITY_EXHAUSTED');
     expect(loser.json().error.details.rule).toBe('NEED_QUANTITY_EXHAUSTED');
 
     expect(await events('offer.OfferAccepted', forNeed(needId))).toHaveLength(1);

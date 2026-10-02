@@ -230,7 +230,7 @@ export const verificationRoutes: FastifyPluginAsyncZod<VerificationRouteDeps> = 
   app.get(
     '/api/v1/admin/verifications',
     {
-      preHandler: requirePermission('verification:nid:read'),
+      preHandler: requirePermission('verification:nid:decide'),
       schema: {
         tags: ['admin'],
         summary: 'Verification review queue (oldest first)',
@@ -252,7 +252,7 @@ export const verificationRoutes: FastifyPluginAsyncZod<VerificationRouteDeps> = 
   app.post(
     '/api/v1/admin/verifications/:id/decision',
     {
-      preHandler: requirePermission('verification:nid:read'),
+      preHandler: requirePermission('verification:nid:decide'),
       schema: {
         tags: ['admin'],
         summary: 'Approve or reject a pending verification',

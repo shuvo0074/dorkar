@@ -333,10 +333,14 @@ export function assertQuantityAvailable(need: NeedSnapshot, quantity: number): v
 /** Exclusive acceptance guard, evaluated under the need row lock. */
 export function assertAcceptable(need: NeedSnapshot, quantity: number): void {
   if (need.acceptedQuantity + quantity > need.quantity) {
-    throw new AppError('CONFLICT', 'This need has already been fulfilled by another offer.', {
-      rule: 'NEED_QUANTITY_EXHAUSTED',
-      remaining: Math.max(0, need.quantity - need.acceptedQuantity),
-    });
+    throw new AppError(
+      'NEED_QUANTITY_EXHAUSTED',
+      'This need has already been fulfilled by another offer.',
+      {
+        rule: 'NEED_QUANTITY_EXHAUSTED',
+        remaining: Math.max(0, need.quantity - need.acceptedQuantity),
+      },
+    );
   }
   if (need.status !== 'OPEN') {
     throw new AppError('INVALID_STATE_TRANSITION', 'This need is no longer open.', {

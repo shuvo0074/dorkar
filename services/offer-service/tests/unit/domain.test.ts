@@ -206,7 +206,7 @@ describe('exclusive acceptance guard', () => {
   it('reports exhaustion, including for an offer the winner just expired', () => {
     const full = need({ quantity: 1, acceptedQuantity: 1 });
     expect(codeOf(() => assertCanAccept(offer, 'BUYER', full, now, settings))).toMatchObject({
-      code: 'CONFLICT',
+      code: 'NEED_QUANTITY_EXHAUSTED',
       rule: 'NEED_QUANTITY_EXHAUSTED',
     });
     expect(

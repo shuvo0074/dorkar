@@ -28,12 +28,14 @@ export const Permissions = [
   'moderation:content:restore',
   'transaction:read:any',
   'dispute:read',
+  'dispute:resolve',
   'category:manage',
   'policy:read',
   'policy:write',
   'audit:read',
   'role:grant',
   'verification:nid:read',
+  'verification:nid:decide',
 ] as const;
 export type Permission = (typeof Permissions)[number];
 
@@ -55,6 +57,8 @@ const ADMIN: Permission[] = [
   ...MODERATOR,
   ...SUPPORT,
   'user:suspend',
+  'dispute:resolve',
+  'verification:nid:decide',
   'category:manage',
   'policy:read',
   'audit:read',

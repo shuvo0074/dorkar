@@ -292,11 +292,11 @@ describe('NID submission', () => {
 });
 
 describe('admin review', () => {
-  it('requires verification:nid:read for the queue and decisions', async () => {
+  it('requires verification:nid:decide for the queue and decisions', async () => {
     const id = randomUUID();
     await submit(id, person());
     const v = await recordOf(id);
-    for (const roles of [['MEMBER'], ['ADMIN'], ['MODERATOR']] as const) {
+    for (const roles of [['MEMBER'], ['MODERATOR'], ['SUPPORT']] as const) {
       const headers = await t.auth.as(randomUUID(), [...roles]);
       expect((await app().inject({ url: '/api/v1/admin/verifications', headers })).statusCode).toBe(
         403,

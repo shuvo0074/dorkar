@@ -3,7 +3,7 @@ import type { Fingerprinter, NidProvider } from '../application/ports';
 
 /**
  * Development default: no external authority, so every submission waits for an admin with
- * `verification:nid:read`. The raw data is not kept anywhere: the reviewer checks it out of band
+ * `verification:nid:decide`. The raw data is not kept anywhere: the reviewer checks it out of band
  * (e.g. a video call or an EC lookup) and records only the decision.
  */
 export class ManualReviewNidProvider implements NidProvider {
