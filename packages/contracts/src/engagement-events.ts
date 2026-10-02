@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { DistrictSchema } from './locations';
 import { MoneySchema, NeedModes } from './marketplace';
-import { TransactionStates } from './marketplace-events';
+import { DisputeReasons, TransactionStates } from './marketplace-events';
 
 /**
  * Phase 2 integration events: bidding, rental, lending, disputes, messaging.
@@ -247,15 +247,6 @@ export type DisputeStatus = (typeof DisputeStatuses)[number];
 /** RELEASE completes the deal, CANCEL cancels it, REFUND refunds (non-cash providers only). */
 export const DisputeResolutions = ['RELEASE', 'CANCEL', 'REFUND'] as const;
 export type DisputeResolution = (typeof DisputeResolutions)[number];
-export const DisputeReasons = [
-  'NOT_RECEIVED',
-  'NOT_AS_DESCRIBED',
-  'DAMAGED',
-  'NOT_RETURNED',
-  'PAYMENT',
-  'NO_SHOW',
-  'OTHER',
-] as const;
 
 const disputeFacts = {
   disputeId: id,

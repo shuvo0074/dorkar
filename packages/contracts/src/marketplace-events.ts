@@ -274,6 +274,18 @@ export const TransactionStates = [
 ] as const;
 export type TransactionState = (typeof TransactionStates)[number];
 
+/** Why a party disputes a deal (the free-text `reason` explains). */
+export const DisputeReasons = [
+  'NOT_RECEIVED',
+  'NOT_AS_DESCRIBED',
+  'DAMAGED',
+  'NOT_RETURNED',
+  'PAYMENT',
+  'NO_SHOW',
+  'OTHER',
+] as const;
+export type DisputeReason = (typeof DisputeReasons)[number];
+
 /** What a transaction was created from. The (sourceType, sourceId) pair is unique except LISTING. */
 export const TransactionSourceTypes = ['OFFER', 'LISTING', 'AUCTION', 'BOOKING', 'LOAN'] as const;
 export type TransactionSourceType = (typeof TransactionSourceTypes)[number];
@@ -312,6 +324,8 @@ export const TransactionEvents = {
       mode: z.enum(NeedModes).optional(),
       /** Free-text reason for cancel/dispute transitions (never PII; contact info is rejected). */
       reason: z.string().max(500).nullable().optional(),
+      /** Set on transitions to DISPUTED. */
+      disputeReason: z.enum(DisputeReasons).optional(),
     }),
   },
 } as const;
