@@ -1,4 +1,9 @@
-import { CatalogEvents, type EventEnvelope } from '@dorkar/contracts';
+import {
+  CatalogEvents,
+  type EventEnvelope,
+  type NeedMode,
+  type TransactionState,
+} from '@dorkar/contracts';
 import {
   AppError,
   Errors,
@@ -15,7 +20,12 @@ import {
   assertPublishable,
   availabilityEffect,
   canTransition,
+  CONSUMING_STATE,
+  consumesStock,
   EditableStatuses,
+  planRelease,
+  planReserve,
+  RELEASING_STATES,
   transition,
   validateDraftAttributes,
   type Listing,
@@ -23,6 +33,7 @@ import {
   type ListingContent,
   type ListingStatus,
   type OwnerAction,
+  type StockPlan,
 } from '../domain/listing';
 import type { CatalogStore, CatalogUnitOfWork, ListingSearch, VerificationGateway } from './ports';
 
@@ -63,6 +74,15 @@ const listingFacts = (l: Listing) => ({
 });
 
 const dedupe = <T>(xs: readonly T[]): T[] => [...new Set(xs)];
+
+const eventCtx = (e: EventEnvelope): Ctx => ({
+  requestId: e.id,
+  correlationId: e.correlationId ?? e.id,
+  ipHash: null,
+  actor: null,
+});
+
+const SYSTEM = { actorId: null, actorType: 'SYSTEM' as const };
 
 /** Listing use cases: drafts, publishing, owner/moderator transitions, public search. */
 export class ListingService {
@@ -192,12 +212,7 @@ export class ListingService {
     const current = await s.listing(p.targetId);
     const action = p.action === 'HIDE' ? 'hide' : 'restore';
     if (!current || !canTransition(current, action)) return; // already applied, withdrawn, or unknown
-    const ctx: Ctx = {
-      requestId: e.id,
-      correlationId: e.correlationId ?? e.id,
-      ipHash: null,
-      actor: null,
-    };
+    const ctx = eventCtx(e);
     const l = await this.apply(s, current, action, ctx, {
       actorId: p.moderatorId,
       actorType: 'ADMIN',
@@ -211,6 +226,96 @@ export class ListingService {
       targetId: l.id,
       metadata: { from: current.status, to: l.status, caseId: p.caseId },
     });
+  }
+
+  // ------------------------------------------------------------ stock reservations
+
+  /**
+   * transaction.TransactionCreated, inside the inbox transaction: a product bought from a
+   * listing reserves what is left of the requested quantity (possibly nothing). The listing row
+   * is locked, so concurrent deals for the last unit serialize and only one gets it.
+   */
+  async onTransactionCreated(
+    s: CatalogStore,
+    p: {
+      transactionId: string;
+      listingId?: string | null | undefined;
+      sellerId: string;
+      quantity: number;
+      mode: NeedMode;
+    },
+    e: EventEnvelope,
+  ): Promise<void> {
+    if (!p.listingId || p.mode !== 'BUY') return;
+    const l = await s.listingForUpdate(p.listingId);
+    // Unknown listing, someone else's listing, or a kind that has no stock (rental, service).
+    if (!l || l.sellerId !== p.sellerId || !consumesStock(l.kind, p.mode)) return;
+
+    const { reserved, plan } = planReserve(l, p.quantity);
+    const inserted = await s.insertReservation({
+      transactionId: p.transactionId,
+      listingId: l.id,
+      requestedQuantity: p.quantity,
+      quantity: reserved,
+    });
+    if (!inserted) return; // already reserved for this transaction
+    await this.applyStock(s, l, plan, eventCtx(e), `reserved for transaction ${p.transactionId}`);
+  }
+
+  /** transaction.TransactionStateChanged: give stock back on cancel/expiry/refund; consume on completion. */
+  async onTransactionStateChanged(
+    s: CatalogStore,
+    p: { transactionId: string; to: TransactionState },
+    e: EventEnvelope,
+  ): Promise<void> {
+    const releasing = (RELEASING_STATES as readonly string[]).includes(p.to);
+    if (!releasing && p.to !== CONSUMING_STATE) return;
+    const r = await s.reservationForUpdate(p.transactionId);
+    if (!r || r.status !== 'ACTIVE') return;
+    if (!releasing) {
+      await s.setReservationStatus(r.transactionId, 'CONSUMED');
+      return;
+    }
+    await s.setReservationStatus(r.transactionId, 'RELEASED');
+    if (r.quantity === 0) return;
+    const l = await s.listingForUpdate(r.listingId);
+    if (!l) return;
+    await this.applyStock(
+      s,
+      l,
+      planRelease(l, r.quantity),
+      eventCtx(e),
+      `released by transaction ${p.transactionId}`,
+    );
+  }
+
+  /** Quantity change, then the stock-driven transition or ListingUpdated. Listing is locked. */
+  private async applyStock(
+    s: CatalogStore,
+    current: Listing,
+    plan: StockPlan,
+    ctx: Ctx,
+    reason: string,
+  ): Promise<void> {
+    if (
+      plan.quantity === current.quantityAvailable &&
+      plan.hiddenFrom === undefined &&
+      plan.stockSoldOut === current.stockSoldOut
+    ) {
+      return;
+    }
+    const l = await s.changeStock(current.id, current.version, {
+      quantity: plan.quantity,
+      hiddenFrom: plan.hiddenFrom,
+      stockSoldOut: plan.action ? current.stockSoldOut : plan.stockSoldOut,
+    });
+    // The row is locked by the caller, so the guard cannot fail short of a bug.
+    if (!l) throw Errors.conflict('The listing changed meanwhile.');
+    if (plan.action) {
+      await this.apply(s, l, plan.action, ctx, { ...SYSTEM, reason });
+    } else if (plan.announce) {
+      await s.outbox(this.event(CatalogEvents.ListingUpdated, l.id, listingFacts(l), ctx));
+    }
   }
 
   // ------------------------------------------------------------ reads
@@ -270,6 +375,7 @@ export class ListingService {
       to: t.to,
       hiddenFrom: t.hiddenFrom,
       hiddenReason: t.to === 'HIDDEN' ? by.reason : null,
+      stockSoldOut: t.stockSoldOut,
     });
     if (!l) {
       // Someone else moved it first (e.g. a concurrent publish): only one transition may win.

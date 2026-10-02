@@ -56,6 +56,11 @@ export interface Listing extends ListingContent {
   status: ListingStatus;
   /** While HIDDEN: the state a restore returns to. */
   hiddenFrom: HideableStatus | null;
+  /**
+   * SOLD_OUT (or HIDDEN from SOLD_OUT) only because deals reserved the last unit, not by the
+   * owner: releasing stock makes it available again.
+   */
+  stockSoldOut: boolean;
   hiddenReason: string | null;
   publishedAt: Date | null;
   createdAt: Date;
@@ -73,15 +78,21 @@ export const ListingActions = [
   'withdraw',
   'hide',
   'restore',
+  'sellOut',
+  'restock',
 ] as const;
 export type ListingAction = (typeof ListingActions)[number];
+
+/** System actions driven by stock reservations, never exposed to owners or moderators. */
+export const StockActions = ['sellOut', 'restock'] as const;
+export type StockAction = (typeof StockActions)[number];
 
 /** Owner actions; `hide`/`restore` belong to moderators. */
 export const OwnerActions = ['publish', 'pause', 'resume', 'markSoldOut', 'withdraw'] as const;
 export type OwnerAction = (typeof OwnerActions)[number];
 
 const RULES: Record<
-  Exclude<ListingAction, 'restore'>,
+  Exclude<ListingAction, 'restore' | 'restock'>,
   { from: readonly ListingStatus[]; to: ListingStatus }
 > = {
   publish: { from: ['DRAFT'], to: 'PUBLISHED' },
@@ -91,6 +102,8 @@ const RULES: Record<
   // WITHDRAWN is the only terminal state.
   withdraw: { from: ['DRAFT', 'PUBLISHED', 'PAUSED', 'SOLD_OUT', 'HIDDEN'], to: 'WITHDRAWN' },
   hide: { from: HideableStatuses, to: 'HIDDEN' },
+  // Stock reached zero on a live listing.
+  sellOut: { from: ['PUBLISHED'], to: 'SOLD_OUT' },
 };
 
 export interface Transition {
@@ -98,21 +111,21 @@ export interface Transition {
   to: ListingStatus;
   /** Set when entering HIDDEN, cleared otherwise. */
   hiddenFrom: HideableStatus | null;
+  /** Whether the resulting state is a stock-driven sell-out (kept across hide/restore). */
+  stockSoldOut: boolean;
 }
 
-export function canTransition(
-  l: Pick<Listing, 'status' | 'hiddenFrom'>,
-  action: ListingAction,
-): boolean {
+type StateFacts = Pick<Listing, 'status' | 'hiddenFrom'> & { stockSoldOut?: boolean };
+
+export function canTransition(l: StateFacts, action: ListingAction): boolean {
   if (action === 'restore') return l.status === 'HIDDEN' && l.hiddenFrom !== null;
+  // Only a sell-out caused by reservations is undone by released stock.
+  if (action === 'restock') return l.status === 'SOLD_OUT' && !!l.stockSoldOut;
   return RULES[action].from.includes(l.status);
 }
 
 /** The next state for `action`, or 409 INVALID_STATE_TRANSITION. */
-export function transition(
-  l: Pick<Listing, 'status' | 'hiddenFrom'>,
-  action: ListingAction,
-): Transition {
+export function transition(l: StateFacts, action: ListingAction): Transition {
   if (!canTransition(l, action)) {
     throw new AppError(
       'INVALID_STATE_TRANSITION',
@@ -120,13 +133,105 @@ export function transition(
       { from: l.status, action },
     );
   }
-  if (action === 'restore') return { from: l.status, to: l.hiddenFrom!, hiddenFrom: null };
+  const keep = !!l.stockSoldOut;
+  if (action === 'restore') {
+    return { from: l.status, to: l.hiddenFrom!, hiddenFrom: null, stockSoldOut: keep };
+  }
+  if (action === 'restock') {
+    return { from: l.status, to: 'PUBLISHED', hiddenFrom: null, stockSoldOut: false };
+  }
   const to = RULES[action].to;
   return {
     from: l.status,
     to,
     hiddenFrom: to === 'HIDDEN' ? (l.status as HideableStatus) : null,
+    stockSoldOut: action === 'sellOut' || (action === 'hide' && keep),
   };
+}
+
+// ------------------------------------------------------------------ stock reservations
+
+export const ReservationStatuses = ['ACTIVE', 'RELEASED', 'CONSUMED'] as const;
+export type ReservationStatus = (typeof ReservationStatuses)[number];
+
+export interface StockReservation {
+  transactionId: string;
+  listingId: string;
+  requestedQuantity: number;
+  /** Units actually taken; below `requestedQuantity` (even 0) when stock ran out. */
+  quantity: number;
+  status: ReservationStatus;
+}
+
+/** Transaction states that give reserved stock back, and the one that uses it up. */
+export const RELEASING_STATES = ['CANCELLED', 'EXPIRED', 'REFUNDED'] as const;
+export const CONSUMING_STATE = 'COMPLETED';
+
+/**
+ * What a stock change does to a listing. The quantity changes first; then at most one status
+ * transition, or (for HIDDEN listings) a silent change of the state a restore returns to.
+ */
+export interface StockPlan {
+  quantity: number;
+  action: StockAction | null;
+  /** New `hiddenFrom` for a HIDDEN listing; undefined leaves it. */
+  hiddenFrom?: HideableStatus;
+  stockSoldOut: boolean;
+  /** A live listing's quantity changed without a transition: emit ListingUpdated. */
+  announce: boolean;
+}
+
+type StockFacts = Pick<Listing, 'status' | 'hiddenFrom' | 'stockSoldOut' | 'quantityAvailable'>;
+
+/** Only products bought outright consume stock; rentals and services never do. */
+export const consumesStock = (kind: ListingKind, mode: NeedMode) =>
+  kind === 'PRODUCT' && mode === 'BUY';
+
+/** Reserve up to `requested` units: whatever is left, possibly none. */
+export function planReserve(
+  l: StockFacts,
+  requested: number,
+): { reserved: number; plan: StockPlan } {
+  const available = Math.max(l.quantityAvailable, 0);
+  const reserved = Math.min(Math.max(requested, 0), available);
+  const quantity = available - reserved;
+  const plan: StockPlan = {
+    quantity,
+    action: null,
+    stockSoldOut: l.stockSoldOut,
+    announce: false,
+  };
+  if (reserved === 0) return { reserved, plan };
+  if (l.status === 'PUBLISHED') {
+    if (quantity === 0) plan.action = 'sellOut';
+    else plan.announce = true;
+  } else if (l.status === 'HIDDEN' && l.hiddenFrom === 'PUBLISHED' && quantity === 0) {
+    // Restoring it later must not put a listing with no stock back on sale.
+    plan.hiddenFrom = 'SOLD_OUT';
+    plan.stockSoldOut = true;
+  }
+  return { reserved, plan };
+}
+
+/**
+ * Give `units` back. A stock-driven sell-out becomes available again; withdrawn, paused,
+ * owner-sold-out and hidden listings keep their state.
+ */
+export function planRelease(l: StockFacts, units: number): StockPlan {
+  const plan: StockPlan = {
+    quantity: Math.max(l.quantityAvailable, 0) + Math.max(units, 0),
+    action: null,
+    stockSoldOut: l.stockSoldOut,
+    announce: false,
+  };
+  if (units <= 0) return { ...plan, quantity: l.quantityAvailable };
+  if (l.status === 'SOLD_OUT' && l.stockSoldOut) plan.action = 'restock';
+  else if (l.status === 'PUBLISHED') plan.announce = true;
+  else if (l.status === 'HIDDEN' && l.hiddenFrom === 'SOLD_OUT' && l.stockSoldOut) {
+    plan.hiddenFrom = 'PUBLISHED';
+    plan.stockSoldOut = false;
+  }
+  return plan;
 }
 
 export type AvailabilityEffect =

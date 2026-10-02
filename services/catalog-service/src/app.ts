@@ -1,4 +1,4 @@
-import { ModerationEvents } from '@dorkar/contracts';
+import { ModerationEvents, TransactionEvents } from '@dorkar/contracts';
 import {
   createServiceRuntime,
   loadConfig,
@@ -58,6 +58,14 @@ export async function buildCatalogService(
     if (p.targetType !== 'LISTING') return;
     await listings.onContentModerated(pgCatalogStore(trx), p, e);
   });
+
+  // Stock reservations from deals (exactly once; the listing row is locked inside).
+  runtime.on(TransactionEvents.TransactionCreated, (p, e, trx) =>
+    listings.onTransactionCreated(pgCatalogStore(trx), p, e),
+  );
+  runtime.on(TransactionEvents.TransactionStateChanged, (p, e, trx) =>
+    listings.onTransactionStateChanged(pgCatalogStore(trx), p, e),
+  );
 
   const deps = { runtime: runtime as unknown as ServiceRuntime<never> };
   await runtime.app.register(categoryRoutes, { ...deps, categories });

@@ -8,7 +8,13 @@ import type {
 } from '@dorkar/contracts';
 import type { Generated, KernelTables } from '@dorkar/kernel';
 import type { ColumnType } from 'kysely';
-import type { HideableStatus, ListingKind, ListingStatus, PriceUnit } from '../domain/listing';
+import type {
+  HideableStatus,
+  ListingKind,
+  ListingStatus,
+  PriceUnit,
+  ReservationStatus,
+} from '../domain/listing';
 
 /** jsonb: pg returns the parsed value; we write JSON text. */
 type Json<T> = ColumnType<T, string, string>;
@@ -50,6 +56,7 @@ export interface CatalogDB extends KernelTables {
     status: Generated<ListingStatus>;
     hidden_from: HideableStatus | null;
     hidden_reason: string | null;
+    stock_sold_out: Generated<boolean>;
     // `search tsvector` is a generated column; never selected or written.
     published_at: ColumnType<Date | null, never, Date | string | null>;
     created_at: Generated<Date>;
@@ -65,5 +72,14 @@ export interface CatalogDB extends KernelTables {
     actor_type: 'USER' | 'ADMIN' | 'SYSTEM';
     reason: string | null;
     occurred_at: Generated<Date>;
+  };
+  stock_reservations: {
+    transaction_id: string;
+    listing_id: string;
+    requested_quantity: number;
+    quantity: number;
+    status: Generated<ReservationStatus>;
+    created_at: Generated<Date>;
+    updated_at: Generated<Date>;
   };
 }

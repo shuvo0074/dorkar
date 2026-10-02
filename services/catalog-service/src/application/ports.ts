@@ -13,6 +13,8 @@ import type {
   ListingContent,
   ListingKind,
   ListingStatus,
+  ReservationStatus,
+  StockReservation,
 } from '../domain/listing';
 
 export interface NewCategory {
@@ -52,6 +54,13 @@ export interface StatusChange {
   to: ListingStatus;
   hiddenFrom: HideableStatus | null;
   hiddenReason: string | null;
+  stockSoldOut: boolean;
+}
+
+export interface StockChange {
+  quantity: number;
+  hiddenFrom?: HideableStatus | undefined;
+  stockSoldOut: boolean;
 }
 
 export interface HistoryEntry {
@@ -89,6 +98,15 @@ export interface CatalogStore {
   /** Guarded state change; null if another transition won the race. */
   changeStatus(change: StatusChange): Promise<Listing | null>;
   appendHistory(entry: HistoryEntry): Promise<void>;
+  /** Row-locks the listing for the rest of the transaction. */
+  listingForUpdate(id: string): Promise<Listing | null>;
+  /** Guarded quantity change (and HIDDEN bookkeeping); null if the listing moved meanwhile. */
+  changeStock(id: string, expectedVersion: number, change: StockChange): Promise<Listing | null>;
+  /** Inserts the reservation; false if one already exists for the transaction. */
+  insertReservation(r: Omit<StockReservation, 'status'>): Promise<boolean>;
+  /** Row-locks the reservation for the rest of the transaction. */
+  reservationForUpdate(transactionId: string): Promise<StockReservation | null>;
+  setReservationStatus(transactionId: string, status: ReservationStatus): Promise<void>;
   searchListings(s: ListingSearch): Promise<Listing[]>;
   listingsBySeller(
     sellerId: string,

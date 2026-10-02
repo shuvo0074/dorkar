@@ -43,6 +43,7 @@ const LISTING_COLUMNS = [
   'status',
   'hidden_from',
   'hidden_reason',
+  'stock_sold_out',
   'published_at',
   'created_at',
   'updated_at',
@@ -70,6 +71,7 @@ const toListing = (r: ListingRow): Listing => ({
   status: r.status,
   hiddenFrom: r.hidden_from,
   hiddenReason: r.hidden_reason,
+  stockSoldOut: r.stock_sold_out,
   publishedAt: r.published_at,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -235,6 +237,7 @@ export function pgCatalogStore(db: Executor): CatalogStore {
           status: c.to,
           hidden_from: c.hiddenFrom,
           hidden_reason: c.hiddenReason,
+          stock_sold_out: c.stockSoldOut,
           ...(c.to === 'PUBLISHED'
             ? { published_at: sql<Date>`coalesce(published_at, ${nowMs})` }
             : {}),
@@ -260,6 +263,69 @@ export function pgCatalogStore(db: Executor): CatalogStore {
           actor_type: h.actorType,
           reason: h.reason,
         })
+        .execute();
+    },
+    async listingForUpdate(id) {
+      const r = await db
+        .selectFrom('listings')
+        .select(LISTING_COLUMNS)
+        .where('id', '=', id)
+        .forUpdate()
+        .executeTakeFirst();
+      return r ? toListing(r) : null;
+    },
+    async changeStock(id, expectedVersion, c) {
+      const r = await db
+        .updateTable('listings')
+        .set((eb) => ({
+          quantity_available: c.quantity,
+          stock_sold_out: c.stockSoldOut,
+          ...(c.hiddenFrom !== undefined ? { hidden_from: c.hiddenFrom } : {}),
+          updated_at: sql<Date>`now()`,
+          version: eb('version', '+', 1),
+        }))
+        .where('id', '=', id)
+        .where('version', '=', expectedVersion)
+        .returning(LISTING_COLUMNS)
+        .executeTakeFirst();
+      return r ? toListing(r) : null;
+    },
+    async insertReservation(r) {
+      const inserted = await db
+        .insertInto('stock_reservations')
+        .values({
+          transaction_id: r.transactionId,
+          listing_id: r.listingId,
+          requested_quantity: r.requestedQuantity,
+          quantity: r.quantity,
+        })
+        .onConflict((oc) => oc.column('transaction_id').doNothing())
+        .returning('transaction_id')
+        .executeTakeFirst();
+      return !!inserted;
+    },
+    async reservationForUpdate(transactionId) {
+      const r = await db
+        .selectFrom('stock_reservations')
+        .selectAll()
+        .where('transaction_id', '=', transactionId)
+        .forUpdate()
+        .executeTakeFirst();
+      return r
+        ? {
+            transactionId: r.transaction_id,
+            listingId: r.listing_id,
+            requestedQuantity: r.requested_quantity,
+            quantity: r.quantity,
+            status: r.status,
+          }
+        : null;
+    },
+    async setReservationStatus(transactionId, status) {
+      await db
+        .updateTable('stock_reservations')
+        .set({ status, updated_at: sql<Date>`now()` })
+        .where('transaction_id', '=', transactionId)
         .execute();
     },
     async searchListings(s) {
