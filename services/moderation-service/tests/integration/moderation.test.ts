@@ -21,7 +21,8 @@ beforeAll(async () => {
 });
 afterAll(() => t.close());
 
-type Target = 'LISTING' | 'NEED' | 'OFFER' | 'REVIEW' | 'USER';
+type Target =
+  'LISTING' | 'NEED' | 'OFFER' | 'REVIEW' | 'USER' | 'MESSAGE' | 'AUCTION' | 'LEND_ITEM';
 
 const report = async (
   reporterId: string,
@@ -335,6 +336,44 @@ describe('moderator decisions', () => {
     expect(actions).toEqual(['HIDE', 'RESTORE']);
     expect((await act(caseId, 'RESTORE', 'again please')).statusCode).toBe(409);
   });
+
+  it.each(['MESSAGE', 'AUCTION', 'LEND_ITEM'] as const)(
+    'phase 2 target %s: report, HIDE and RESTORE emit ContentModerated with its type',
+    async (targetType) => {
+      const { caseId, targetId } = await openCase(targetType, 'HARASSMENT');
+      const listed = await app().inject({
+        url: `/api/v1/admin/moderation/cases?targetType=${targetType}&status=OPEN`,
+        headers: await t.auth.as(randomUUID(), ['MODERATOR']),
+      });
+      expect(listed.statusCode).toBe(200);
+      expect(listed.json().data.map((c: { id: string }) => c.id)).toContain(caseId);
+
+      const m = mod();
+      expect((await act(caseId, 'HIDE', 'Abusive content', m)).statusCode).toBe(200);
+      expect((await act(caseId, 'RESTORE', 'Appeal accepted', m)).statusCode).toBe(200);
+      const events = (await outboxFor(targetId)).map((e) =>
+        ModerationEvents.ContentModerated.schema.parse(e.payload),
+      );
+      expect(events).toEqual([
+        {
+          caseId,
+          targetType,
+          targetId,
+          action: 'HIDE',
+          reason: 'Abusive content',
+          moderatorId: m.id,
+        },
+        {
+          caseId,
+          targetType,
+          targetId,
+          action: 'RESTORE',
+          reason: 'Appeal accepted',
+          moderatorId: m.id,
+        },
+      ]);
+    },
+  );
 
   it('DISMISS closes the case and its reports without an event', async () => {
     const { caseId, targetId } = await openCase('OFFER', 'SPAM');

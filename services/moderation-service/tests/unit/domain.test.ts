@@ -10,6 +10,7 @@ import {
   decide,
   DecisionActions,
   MAX_COUNTED_REPORTS,
+  ModerationTargets,
   moreSevere,
   REASON_WEIGHTS,
   withReport,
@@ -127,6 +128,17 @@ describe('case state machine', () => {
       reports: 'DISMISSED',
       event: null,
     });
+  });
+
+  it('every other target, including phase 2 ones, follows the content table', () => {
+    for (const targetType of ModerationTargets.filter((x) => x !== 'USER')) {
+      expect(decide({ status: 'OPEN', targetHidden: false, targetType }, 'HIDE').event).toBe(
+        'HIDE',
+      );
+      expect(decide({ status: 'ACTIONED', targetHidden: true, targetType }, 'RESTORE').event).toBe(
+        'RESTORE',
+      );
+    }
   });
 
   it('only open cases can be assigned', () => {
