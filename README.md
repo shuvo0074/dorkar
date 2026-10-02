@@ -23,7 +23,7 @@ Requirements: Node ≥ 24, pnpm 10, and either Docker or local Postgres ≥ 14 +
 pnpm install
 pnpm infra:up                                   # Postgres :5433, Redis :6380 (Docker)
 cp services/identity-service/.env.example services/identity-service/.env
-pnpm --filter @dorkar/identity-service keys:generate >> services/identity-service/.env
+pnpm --silent --filter @dorkar/identity-service keys:generate >> services/identity-service/.env
 pnpm --filter @dorkar/identity-service migrate up
 pnpm --filter @dorkar/identity-service dev       # http://localhost:4001/docs
 cp services/gateway/.env.example services/gateway/.env   # then set PII_HASH_KEY
