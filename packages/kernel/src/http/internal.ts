@@ -2,6 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { RequestContext } from '../context';
 import { safeEqual } from '../crypto';
 import { AppError, Errors } from '../errors';
+import { currentTraceparent, parseTraceparent, TRACEPARENT_HEADER } from '../trace';
 
 /**
  * Service-to-service calls use `/internal/v1/*` routes, which the gateway never routes (its
@@ -28,8 +29,8 @@ export interface InternalClientOptions {
 }
 
 /**
- * Minimal internal HTTP client: short timeout, correlation propagation, error envelope mapped
- * back to AppError. Callers decide whether a failure is fail-open or fail-closed.
+ * Minimal internal HTTP client: short timeout, correlation and trace propagation (`traceparent`
+ * from `ctx`, else from the current execution scope), error envelope mapped back to AppError. Callers decide whether a failure is fail-open or fail-closed.
  */
 export function createInternalClient(opts: InternalClientOptions) {
   return async function call<T>(
@@ -37,7 +38,7 @@ export function createInternalClient(opts: InternalClientOptions) {
     init: {
       method?: 'GET' | 'POST';
       body?: unknown;
-      ctx?: Pick<RequestContext, 'requestId' | 'correlationId'>;
+      ctx?: Pick<RequestContext, 'requestId' | 'correlationId' | 'traceparent'>;
     } = {},
   ): Promise<T> {
     const headers: Record<string, string> = {
@@ -49,6 +50,8 @@ export function createInternalClient(opts: InternalClientOptions) {
       headers['x-request-id'] = init.ctx.requestId;
       headers['x-correlation-id'] = init.ctx.correlationId;
     }
+    const traceparent = init.ctx?.traceparent ?? currentTraceparent();
+    if (parseTraceparent(traceparent)) headers[TRACEPARENT_HEADER] = traceparent!;
     let res: Response;
     try {
       res = await fetch(new URL(path, opts.baseUrl), {

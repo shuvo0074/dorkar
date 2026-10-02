@@ -3,7 +3,7 @@
 // Uses DATABASE_URL (admin connection, default postgres://localhost:5432/dorkar) and REDIS_URL.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { generateKeyPairSync, randomBytes } from 'node:crypto';
-import { existsSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import pg from './pg-shim.mjs';
 import { DEV_ENV_FILE, readDevEnv, ROOT, SERVICES, serviceEnv } from './backend-services.mjs';
@@ -27,6 +27,11 @@ if (!existsSync(DEV_ENV_FILE)) {
   ];
   writeFileSync(DEV_ENV_FILE, `${lines.join('\n')}\n`, { mode: 0o600 });
   console.log('created .env.dev');
+}
+// Secrets added after a developer's .env.dev was created are appended, never regenerated.
+if (!/^METRICS_TOKEN=/m.test(readFileSync(DEV_ENV_FILE, 'utf8'))) {
+  appendFileSync(DEV_ENV_FILE, `METRICS_TOKEN=${hex(32)}\n`);
+  console.log('added METRICS_TOKEN to .env.dev');
 }
 const dev = readDevEnv();
 

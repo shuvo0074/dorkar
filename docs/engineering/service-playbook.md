@@ -13,7 +13,7 @@ services/<name>-service/
   .env.example
   migrations/
     0001_<name>.ts        raw SQL via kysely `sql`, unqualified table names (search_path is set)
-    index.ts              [kernelMigration, (kernelIdempotencyMigration,) m0001…] in name order
+    index.ts              [kernelMigration, (kernelIdempotencyMigration,) kernelOutboxTraceMigration, m0001…] in name order
   src/
     domain/               pure rules: entities, value objects, state machines, policies. No I/O.
     application/          use cases + ports (interfaces). Depends on domain only.
@@ -35,7 +35,11 @@ Lint enforces layer boundaries: `domain/` must not import `application/`,
 - `createServiceRuntime<DB>({ config, logger, producer, openapi, verifier?, idempotency? })` gives
   `app`, `db`, `redis`, `bus`, `auth.authenticate`, `auth.requirePermission(perm)`,
   `internalOnly`, `event(def, aggregateId, payload, ctx)`, `on(def, handler)`, `deliver(envelope)`,
-  `every(name, ms, run)`, `startWorkers/stopWorkers/close`.
+  `every(name, ms, run)`, `metrics`, `startWorkers/stopWorkers/close`.
+- Observability is built in: `/metrics` (when `METRICS_TOKEN` is set), RED metrics per route
+  template, outbox/consumer/job metrics, and W3C `traceparent` propagation (HTTP, internal client,
+  event envelopes). Pass `req.ctx` to `runtime.event(...)` and internal calls; never put ids or
+  user data in metric labels (docs/architecture/07-operations.md §4).
 - Write state + event in one transaction: `appendToOutbox(trx, runtime.event(Def, id, payload, req.ctx))`.
 - Consume another service's event: `runtime.on(OtherEvents.X, async (payload, envelope, trx) => …)`.
   It runs inside the inbox transaction, exactly once. Write only with `trx`. Types emitted by every

@@ -1,6 +1,6 @@
 import proxy, { type FastifyHttpProxyOptions } from '@fastify/http-proxy';
 import type { ErrorBody } from '@dorkar/contracts';
-import type { App } from '@dorkar/kernel';
+import { TRACEPARENT_HEADER, type App } from '@dorkar/kernel';
 import type { FastifyReply } from 'fastify';
 import type { IncomingHttpHeaders } from 'node:http';
 import type { RouteRule, Upstream } from '../../route-table';
@@ -23,6 +23,7 @@ interface EdgeRequest {
   hostname: string;
   id: string;
   correlationId: string;
+  ctx: { traceparent?: string };
 }
 
 function requestHeaders(req: EdgeRequest, headers: IncomingHttpHeaders): IncomingHttpHeaders {
@@ -36,6 +37,8 @@ function requestHeaders(req: EdgeRequest, headers: IncomingHttpHeaders): Incomin
   out['x-forwarded-host'] = req.hostname;
   out['x-request-id'] = req.id;
   out['x-correlation-id'] = req.correlationId;
+  // The edge's span (continuing the client's trace, or a new one) is the upstream's parent.
+  if (req.ctx.traceparent) out[TRACEPARENT_HEADER] = req.ctx.traceparent;
   return out;
 }
 

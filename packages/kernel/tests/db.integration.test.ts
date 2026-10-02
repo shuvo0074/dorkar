@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { IdentityEvents } from '@dorkar/contracts';
 import { appendAudit } from '../src/audit';
 import { createDatabase, type Database, type KernelTables } from '../src/db/database';
-import { kernelMigration } from '../src/db/kernel-migration';
+import { kernelMigration, kernelOutboxTraceMigration } from '../src/db/kernel-migration';
 import { migrateDown, migrateUp, migrationStatus, type Migration } from '../src/db/migrator';
 import { appendToOutbox, createEventFactory } from '../src/outbox/outbox';
 import { OutboxRelay, type EventPublisher } from '../src/outbox/relay';
@@ -25,7 +25,7 @@ const widgets: Migration = {
   up: async (trx) => void (await sql`create table widgets (id int primary key)`.execute(trx)),
   down: async (trx) => void (await sql`drop table widgets`.execute(trx)),
 };
-const migrations = [kernelMigration, widgets];
+const migrations = [kernelMigration, kernelOutboxTraceMigration, widgets];
 
 beforeAll(async () => {
   await ensureTestDatabase();
@@ -47,12 +47,13 @@ describe('migrator', () => {
   it('applies, is idempotent, rolls back and re-applies', async () => {
     expect(await migrateUp({ db: database.root, schema, migrations, logger })).toEqual([
       '0000_kernel',
+      '0000_kernel_outbox_trace',
       '0001_widgets',
     ]);
     expect(await migrateUp({ db: database.root, schema, migrations })).toEqual([]);
     expect(await migrateDown({ db: database.root, schema, migrations })).toEqual(['0001_widgets']);
     const status = await migrationStatus({ db: database.root, schema, migrations });
-    expect(status.map((s) => s.appliedAt !== null)).toEqual([true, false]);
+    expect(status.map((s) => s.appliedAt !== null)).toEqual([true, true, false]);
     expect(await migrateUp({ db: database.root, schema, migrations })).toEqual(['0001_widgets']);
   });
 

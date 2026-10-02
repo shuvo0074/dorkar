@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { decodeCursor, encodeCursor, paginate } from '../src/cursor';
 import type { KernelTables } from '../src/db/database';
-import { kernelMigration } from '../src/db/kernel-migration';
+import { kernelMigration, kernelOutboxTraceMigration } from '../src/db/kernel-migration';
 import type { Migration } from '../src/db/migrator';
 import { AppError } from '../src/errors';
 import { INTERNAL_TOKEN_HEADER } from '../src/http/internal';
@@ -35,7 +35,12 @@ let runs = 0;
 beforeAll(async () => {
   t = await startTestService({
     schemaPrefix: 'kernelrt',
-    migrations: [kernelMigration, kernelIdempotencyMigration, seenMigration],
+    migrations: [
+      kernelMigration,
+      kernelIdempotencyMigration,
+      kernelOutboxTraceMigration,
+      seenMigration,
+    ],
     build: async (env, logger, verifier) => {
       const runtime = await createServiceRuntime<DB>({
         config: loadConfig(serviceEnvSchema, env),

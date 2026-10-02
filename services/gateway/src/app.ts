@@ -3,6 +3,8 @@ import {
   createHttpServer,
   createJwtVerifier,
   createRedis,
+  deadLetterStreamFor,
+  Metrics,
   RedisRateLimiter,
   RedisStreamConsumer,
   type App,
@@ -53,6 +55,7 @@ export interface GatewayOverrides {
 export interface GatewayService {
   app: App;
   redis: Redis;
+  metrics: Metrics;
   consumer: RedisStreamConsumer;
   startWorkers(): Promise<void>;
   stopWorkers(): Promise<void>;
@@ -67,12 +70,19 @@ export async function buildGateway(
 ): Promise<GatewayService> {
   const redis = createRedis(config.REDIS_URL, { keyPrefix: 'gateway', logger });
   const revocations = overrides.revocations ?? new RedisRevocationStore(redis);
+  const metrics = new Metrics({
+    service: config.SERVICE_NAME,
+    defaultMetrics: Boolean(config.METRICS_TOKEN),
+    logger,
+  });
 
   const app = await createHttpServer({
     config,
     logger,
     ipHashKey: config.PII_HASH_KEY,
     readiness: [{ name: 'redis', check: async () => void (await redis.ping()) }],
+    metrics,
+    metricsToken: config.METRICS_TOKEN,
   });
 
   registerEdgePolicy(app, {
@@ -111,13 +121,29 @@ export async function buildGateway(
       consumer: `${hostname()}-${process.pid}`,
       handler: createRevocationHandler(revocations, config.ACCESS_TOKEN_TTL_SECONDS),
       logger,
+      metrics,
     },
   );
+  // Consumer-group lag is read on scrape over a separate, non-blocking unprefixed connection
+  // (the consumer's own connection sits in XREADGROUP BLOCK). Only when metrics are served.
+  const lagRedis =
+    config.METRICS_TOKEN && config.EVENTS_CONSUMER_ENABLED
+      ? createRedis(config.REDIS_URL, { keyPrefix: null, logger })
+      : null;
+  if (lagRedis) {
+    metrics.observeConsumerGroup(
+      lagRedis,
+      'identity',
+      config.EVENTS_GROUP,
+      deadLetterStreamFor('identity', config.EVENTS_GROUP),
+    );
+  }
 
   const stopWorkers = () => consumer.stop();
   return {
     app,
     redis,
+    metrics,
     consumer,
     async startWorkers() {
       if (config.EVENTS_CONSUMER_ENABLED) await consumer.start();
@@ -126,6 +152,8 @@ export async function buildGateway(
     async close() {
       await app.close();
       await stopWorkers();
+      metrics.forgetSources();
+      lagRedis?.disconnect();
       redis.disconnect();
     },
   };
