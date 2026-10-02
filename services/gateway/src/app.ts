@@ -16,7 +16,34 @@ import type { GatewayConfig } from './config/env';
 import { RedisRevocationStore } from './infrastructure/redis-revocation-store';
 import { registerEdgePolicy } from './interfaces/http/edge';
 import { registerProxies } from './interfaces/http/proxy';
-import { ROUTE_TABLE } from './route-table';
+import { ROUTE_TABLE, type Upstream } from './route-table';
+
+/**
+ * Every upstream's URL from config. A full Record, so adding an upstream without wiring it here
+ * is a compile error instead of its routes silently answering 404 at the edge.
+ */
+export function upstreamUrls(config: GatewayConfig): Record<Upstream, string | undefined> {
+  return {
+    identity: config.UPSTREAM_IDENTITY_URL,
+    profile: config.UPSTREAM_PROFILE_URL,
+    verification: config.UPSTREAM_VERIFICATION_URL,
+    catalog: config.UPSTREAM_CATALOG_URL,
+    demand: config.UPSTREAM_DEMAND_URL,
+    matching: config.UPSTREAM_MATCHING_URL,
+    offer: config.UPSTREAM_OFFER_URL,
+    transaction: config.UPSTREAM_TRANSACTION_URL,
+    reputation: config.UPSTREAM_REPUTATION_URL,
+    moderation: config.UPSTREAM_MODERATION_URL,
+    notification: config.UPSTREAM_NOTIFICATION_URL,
+    media: config.UPSTREAM_MEDIA_URL,
+    bidding: config.UPSTREAM_BIDDING_URL,
+    rental: config.UPSTREAM_RENTAL_URL,
+    lending: config.UPSTREAM_LENDING_URL,
+    dispute: config.UPSTREAM_DISPUTE_URL,
+    messaging: config.UPSTREAM_MESSAGING_URL,
+    dashboard: config.UPSTREAM_DASHBOARD_URL,
+  };
+}
 
 export interface GatewayOverrides {
   limiter?: RateLimiter;
@@ -69,20 +96,7 @@ export async function buildGateway(
 
   const skipped = await registerProxies(app, {
     routes: ROUTE_TABLE,
-    upstreams: {
-      identity: config.UPSTREAM_IDENTITY_URL,
-      profile: config.UPSTREAM_PROFILE_URL,
-      verification: config.UPSTREAM_VERIFICATION_URL,
-      catalog: config.UPSTREAM_CATALOG_URL,
-      demand: config.UPSTREAM_DEMAND_URL,
-      matching: config.UPSTREAM_MATCHING_URL,
-      offer: config.UPSTREAM_OFFER_URL,
-      transaction: config.UPSTREAM_TRANSACTION_URL,
-      reputation: config.UPSTREAM_REPUTATION_URL,
-      moderation: config.UPSTREAM_MODERATION_URL,
-      notification: config.UPSTREAM_NOTIFICATION_URL,
-      media: config.UPSTREAM_MEDIA_URL,
-    },
+    upstreams: upstreamUrls(config),
     timeoutMs: config.UPSTREAM_TIMEOUT_MS,
   });
   if (skipped.length)

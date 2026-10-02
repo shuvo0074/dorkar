@@ -7,145 +7,36 @@
 //   notifications.
 //
 //   pnpm e2e:backend      (exits non-zero on the first failed expectation)
-import { randomBytes, randomUUID } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { GATEWAY_PORT, ROOT } from './backend-services.mjs';
+import { randomUUID } from 'node:crypto';
+import {
+  api,
+  CATEGORIES,
+  eventually,
+  expectStatus,
+  fail,
+  idem,
+  log,
+  requireGateway,
+  requiredAttributes,
+  setUpSeller,
+  signIn,
+  steps,
+} from './e2e-lib.mjs';
 
-const BASE = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${GATEWAY_PORT}`;
-const SMS_LOG = resolve(ROOT, 'var/dev-sms.log');
-const MOBILE_PHONES = '0192ca7a-0000-7000-8000-000000000101';
-
-let step = 0;
-const log = (msg) => console.log(`\x1b[32m✔\x1b[0m ${String(++step).padStart(2)}. ${msg}`);
-const fail = (msg, extra) => {
-  console.error(`\x1b[31m✘ ${msg}\x1b[0m`, extra ? JSON.stringify(extra, null, 2) : '');
-  process.exit(1);
-};
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-async function api(method, path, { token, body, idem } = {}) {
-  const headers = { accept: 'application/json' };
-  if (body !== undefined) headers['content-type'] = 'application/json';
-  if (token) headers.authorization = `Bearer ${token}`;
-  if (idem) headers['idempotency-key'] = idem;
-  const res = await fetch(BASE + path, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  const text = await res.text();
-  let json = null;
-  try {
-    json = text ? JSON.parse(text) : null;
-  } catch {
-    json = text;
-  }
-  return { status: res.status, body: json };
-}
-
-async function expectStatus(promise, status, what) {
-  const r = await promise;
-  if (r.status !== status) fail(`${what}: expected ${status}, got ${r.status}`, r.body);
-  return r.body;
-}
-
-/** Polls until `fn` returns a truthy value (events are asynchronous). */
-async function eventually(what, fn, timeoutMs = 15_000) {
-  const until = Date.now() + timeoutMs;
-  let last;
-  while (Date.now() < until) {
-    last = await fn();
-    if (last) return last;
-    await sleep(250);
-  }
-  fail(`timed out waiting for: ${what}`, last);
-}
-
-const idem = () => randomBytes(12).toString('base64url');
-const phone = () =>
-  `01${7 + Math.floor(Math.random() * 3)}${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
-
-async function signIn(label) {
-  const p = phone();
-  const req = await expectStatus(
-    api('POST', '/api/v1/auth/request-otp', { body: { phone: p } }),
-    202,
-    `${label} request-otp`,
-  );
-  const e164 = `+880${p.slice(1)}`;
-  const code = await eventually(`${label} OTP SMS`, async () => {
-    const lines = readFileSync(SMS_LOG, 'utf8').trim().split('\n').reverse();
-    const m = lines.map((l) => JSON.parse(l)).find((m) => m.to === e164);
-    return m && /code is (\d{6})/.exec(m.text)?.[1];
-  });
-  const r = await expectStatus(
-    api('POST', '/api/v1/auth/verify-otp', {
-      body: {
-        challengeId: req.data.challengeId,
-        code,
-        device: {
-          key: randomBytes(32).toString('base64url'),
-          platform: 'web',
-          label: `e2e ${label}`,
-        },
-      },
-    }),
-    200,
-    `${label} verify-otp`,
-  );
-  return { token: r.data.accessToken, id: r.data.account.id };
-}
+const MOBILE_PHONES = CATEGORIES.MOBILE_PHONES;
 
 // ------------------------------------------------------------------------------------------------
 
-const health = await fetch(`${BASE}/health/ready`).catch(() => null);
-if (!health?.ok) fail(`gateway not reachable at ${BASE} — start it with \`pnpm dev:backend\``);
+await requireGateway();
 
 const buyer = await signIn('buyer');
 const seller = await signIn('seller');
 log(`buyer and seller signed in with phone + OTP (${buyer.id.slice(-6)}, ${seller.id.slice(-6)})`);
 
-await expectStatus(
-  api('PATCH', '/api/v1/me/profile', {
-    token: seller.token,
-    body: { displayName: 'Rahim Mobile House', userType: 'BUSINESS', district: 'dhaka' },
-  }),
-  200,
-  'seller profile',
-);
-await expectStatus(
-  api('PUT', '/api/v1/me/seller-capabilities', {
-    token: seller.token,
-    body: {
-      roles: ['SELLER'],
-      categoryIds: [MOBILE_PHONES],
-      serviceDistricts: ['dhaka'],
-      deliveryModes: ['SELLER_DELIVERY'],
-      active: true,
-    },
-  }),
-  200,
-  'seller capabilities',
-);
+await setUpSeller(seller, { displayName: 'Rahim Mobile House', categoryIds: [MOBILE_PHONES] });
 log('seller set up a business profile and sells mobile phones in Dhaka');
 
-const category = await expectStatus(
-  api('GET', `/api/v1/categories/${MOBILE_PHONES}`),
-  200,
-  'category',
-);
-const schema = category.data.attributeSchema;
-const attributes = {};
-for (const [key, spec] of Object.entries(schema.properties)) {
-  if (!schema.required.includes(key)) continue;
-  attributes[key] =
-    spec.type === 'string'
-      ? (spec.enum?.[0] ?? 'Sample')
-      : spec.type === 'boolean'
-        ? true
-        : (spec.minimum ?? 1) + 255;
-}
+const { category, attributes } = await requiredAttributes(MOBILE_PHONES);
 const listing = await expectStatus(
   api('POST', '/api/v1/listings', {
     token: seller.token,
@@ -171,7 +62,7 @@ await expectStatus(
   200,
   'publish listing',
 );
-log(`seller published a listing (${category.data.nameEn}, ৳78,000)`);
+log(`seller published a listing (${category.nameEn}, ৳78,000)`);
 
 const need = await expectStatus(
   api('POST', '/api/v1/needs', {
@@ -375,4 +266,4 @@ await expectStatus(
 );
 log('a third user cannot see the transaction or the offers (404, no leaks)');
 
-console.log(`\n\x1b[32mEnd-to-end marketplace loop passed (${step} steps).\x1b[0m`);
+console.log(`\n\x1b[32mEnd-to-end marketplace loop passed (${steps()} steps).\x1b[0m`);
