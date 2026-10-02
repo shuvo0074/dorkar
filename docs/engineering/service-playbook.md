@@ -78,6 +78,10 @@ the product promises phone numbers stay private), `permissionsFor`, `Roles`.
   transitions cannot both succeed; append a history row; emit the event.
 - Text enums as `text` + `CHECK (... IN (...))`. JSONB for category attributes.
 - Indexes for every list/filter you expose. Full-text: generated `tsvector` column + GIN.
+- Runtime queries are schema-scoped by Kysely's `withSchema`, which does **not** rewrite table
+  names inside raw `sql` fragments. In raw SQL reference only columns; name tables through the
+  query builder (`selectFrom`, `updateTable`, …) or `sql.table(...)` qualified with the schema.
+  Migrations are different: they run with `search_path` set, so unqualified names are fine there.
 
 ## Tests (mandatory)
 
