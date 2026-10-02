@@ -19,6 +19,12 @@ export const Upstreams = [
   'moderation',
   'notification',
   'media',
+  'bidding',
+  'rental',
+  'lending',
+  'dispute',
+  'messaging',
+  'dashboard',
 ] as const;
 export type Upstream = (typeof Upstreams)[number];
 
@@ -76,4 +82,34 @@ export const ROUTE_TABLE: readonly RouteRule[] = [
   { prefix: '/api/v1/me/notifications', upstream: 'notification' },
   // media
   { prefix: '/api/v1/media', upstream: 'media' },
+  // bidding
+  { prefix: '/api/v1/auctions', upstream: 'bidding' },
+  { prefix: '/api/v1/me/auctions', upstream: 'bidding' },
+  { prefix: '/api/v1/me/bids', upstream: 'bidding' },
+  { prefix: '/api/v1/admin/auctions', upstream: 'bidding' },
+  // rental
+  { prefix: '/api/v1/listings/:listingId/availability', upstream: 'rental' },
+  { prefix: '/api/v1/listings/:listingId/rental-terms', upstream: 'rental' },
+  { prefix: '/api/v1/bookings', upstream: 'rental' },
+  { prefix: '/api/v1/me/bookings', upstream: 'rental' },
+  { prefix: '/api/v1/admin/bookings', upstream: 'rental' },
+  // lending
+  { prefix: '/api/v1/lend-items', upstream: 'lending' },
+  { prefix: '/api/v1/me/lend-items', upstream: 'lending' },
+  { prefix: '/api/v1/loans', upstream: 'lending' },
+  { prefix: '/api/v1/me/loans', upstream: 'lending' },
+  { prefix: '/api/v1/admin/loans', upstream: 'lending' },
+  // dispute
+  { prefix: '/api/v1/disputes', upstream: 'dispute' },
+  { prefix: '/api/v1/me/disputes', upstream: 'dispute' },
+  { prefix: '/api/v1/admin/disputes', upstream: 'dispute' },
+  // messaging
+  { prefix: '/api/v1/conversations', upstream: 'messaging' },
+  { prefix: '/api/v1/me/blocked-users', upstream: 'messaging' },
+  { prefix: '/api/v1/admin/messages', upstream: 'messaging' },
+  // dashboard (admin BFF + personal dashboard, ADR-0007)
+  { prefix: '/api/v1/admin/dashboard', upstream: 'dashboard' },
+  { prefix: '/api/v1/admin/activity', upstream: 'dashboard' },
+  { prefix: '/api/v1/me/dashboard', upstream: 'dashboard' },
+  { prefix: '/api/v1/me/activity', upstream: 'dashboard' },
 ];

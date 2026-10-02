@@ -20,6 +20,12 @@ export const SERVICES = {
   reputation: { dir: 'services/reputation-service', port: 4010, schema: 'reputation' },
   moderation: { dir: 'services/moderation-service', port: 4011, schema: 'moderation' },
   notification: { dir: 'services/notification-service', port: 4012, schema: 'notification' },
+  bidding: { dir: 'services/bidding-service', port: 4013, schema: 'bidding' },
+  rental: { dir: 'services/rental-service', port: 4014, schema: 'rental' },
+  lending: { dir: 'services/lending-service', port: 4015, schema: 'lending' },
+  dispute: { dir: 'services/dispute-service', port: 4016, schema: 'dispute' },
+  messaging: { dir: 'services/messaging-service', port: 4017, schema: 'messaging' },
+  dashboard: { dir: 'services/dashboard-service', port: 4018, schema: 'dashboard' },
 };
 export const GATEWAY_PORT = 4000;
 

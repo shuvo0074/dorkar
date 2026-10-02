@@ -7,3 +7,5 @@ export * from './locations';
 export * from './attributes';
 export * from './marketplace-events';
 export * from './privacy';
+export * from './engagement-events';
+export * from './activity';

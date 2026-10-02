@@ -38,9 +38,12 @@ Lint enforces layer boundaries: `domain/` must not import `application/`,
   `every(name, ms, run)`, `startWorkers/stopWorkers/close`.
 - Write state + event in one transaction: `appendToOutbox(trx, runtime.event(Def, id, payload, req.ctx))`.
 - Consume another service's event: `runtime.on(OtherEvents.X, async (payload, envelope, trx) => …)`.
-  It runs inside the inbox transaction, exactly once. Write only with `trx`.
+  It runs inside the inbox transaction, exactly once. Write only with `trx`. Types emitted by every
+  service (`audit.ActivityRecorded`) take `{ producers: [...] }` as a third argument.
 - Audit important actions in the same transaction: `appendAudit(trx, req.ctx, { action, targetType, targetId, metadata })`.
-  `metadata` never holds PII or secrets.
+  `metadata` never holds PII or secrets. Each audit record is also queued as an
+  `audit.ActivityRecorded` outbox row (aggregate id = audit id) for the activity log; when a test
+  inspects the outbox, filter by `type` or `aggregate_id`.
 - Critical POSTs (accept, create transaction, place bid…): `withIdempotency(db, { actorId, scope, key: req.headers['idempotency-key'], fingerprint: requestFingerprint({ params, body }), required: true }, run)`.
   Include `kernelIdempotencyMigration` and pass `idempotency: true` to the runtime.
 - Lists: keyset pagination with `decodeCursor`, `paginate(rows /* limit+1 */, limit, row => ({ k, id }))`.
@@ -53,7 +56,8 @@ Lint enforces layer boundaries: `domain/` must not import `application/`,
 
 ## Contracts (`@dorkar/contracts`)
 
-Events are already defined in `marketplace-events.ts`; use them as-is. If you need a new
+Events are already defined in `marketplace-events.ts` (MVP), `engagement-events.ts` (bidding,
+rental, lending, dispute, messaging) and `activity.ts`; use them as-is. If you need a new
 event or field, **do not edit contracts**; report it in your final summary. Also there:
 `MoneySchema` (integer poisha), `NeedModes`, `Conditions`, `DeliveryModes`, `LocationSchema` /
 `DistrictSchema`, `validateAttributes`, `findContactInfo` (reject phone/email in public text:

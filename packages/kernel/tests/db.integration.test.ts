@@ -92,10 +92,63 @@ describe('audit log', () => {
       sql`truncate ${sql.id(schema, 'audit_log')}`.execute(database.root),
     ).rejects.toThrow(/append-only/);
   });
+
+  it('queues an audit.ActivityRecorded event in the same transaction', async () => {
+    const actor = {
+      id: uuidv7(),
+      sessionId: uuidv7(),
+      deviceId: uuidv7(),
+      roles: ['MEMBER' as const],
+      permissions: new Set<never>(),
+    };
+    const ctx = { requestId: 'r2', ipHash: 'h', actor };
+    await database.db
+      .transaction()
+      .execute(async (trx) => {
+        await appendAudit(trx, ctx, { action: 'rolled.back' });
+        throw new Error('rollback');
+      })
+      .catch(() => {});
+    await appendAudit(database.db, ctx, {
+      action: 'widget.renamed',
+      targetType: 'WIDGET',
+      targetId: '7',
+      metadata: { from: 'a', to: 'b' },
+    });
+    const audit = await database.db
+      .selectFrom('audit_log')
+      .selectAll()
+      .where('action', '=', 'widget.renamed')
+      .executeTakeFirstOrThrow();
+    const events = await database.db
+      .selectFrom('outbox')
+      .selectAll()
+      .where('type', '=', 'audit.ActivityRecorded')
+      .execute();
+    expect(events.map((e) => (e.payload as { action: string }).action)).toEqual([
+      'test.action',
+      'widget.renamed',
+    ]);
+    expect(events[1]).toMatchObject({ aggregate_id: audit.id, causation_id: 'r2' });
+    expect(events[1]!.payload).toEqual({
+      auditId: audit.id,
+      occurredAt: audit.occurred_at.toISOString(),
+      actorId: actor.id,
+      actorType: 'USER',
+      action: 'widget.renamed',
+      targetType: 'WIDGET',
+      targetId: '7',
+      requestId: 'r2',
+      ipHash: 'h',
+      metadata: { from: 'a', to: 'b' },
+    });
+  });
 });
 
 describe('outbox relay', () => {
   it('publishes committed events exactly once per tick and skips rolled-back ones', async () => {
+    // Start from an empty queue (the audit tests above queued activity events).
+    await database.db.updateTable('outbox').set({ published_at: new Date() }).execute();
     const event = createEventFactory('kernel-test');
     const accountId = uuidv7();
     await database.db.transaction().execute(async (trx) => {

@@ -11,7 +11,7 @@ else
   PSQL=(psql -v ON_ERROR_STOP=1 --username "${POSTGRES_USER:-postgres}" --dbname "${POSTGRES_DB:-dorkar}")
 fi
 
-SERVICES=(identity profile verification catalog demand matching offer txn reputation moderation notification media)
+SERVICES=(identity profile verification catalog demand matching offer txn reputation moderation notification media bidding rental lending dispute messaging dashboard)
 
 "${PSQL[@]}" <<SQL
 create extension if not exists pg_trgm;

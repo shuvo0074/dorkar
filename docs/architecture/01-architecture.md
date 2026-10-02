@@ -107,9 +107,11 @@ returns).
 | **dispute**      | disputes, evidence, resolutions                                                                                                                                             | resolution commands transaction transitions                                                              | `DisputeOpened`, `DisputeResolved`                                                                     | Phase 2 (MVP: transaction `DISPUTED` state + moderation report) |
 | **messaging**    | conversations bound to a context (need/listing/offer/transaction)                                                                                                           | participants-only access; phone numbers never exposed                                                    | `MessageSent`                                                                                          | Phase 2                                                         |
 
-**Admin** is not a service. Each service exposes `/api/v1/admin/...` routes
-protected by granular permissions; the admin web app talks to them via the
-gateway. A dedicated admin BFF is added only if aggregation needs justify it.
+**Admin** actions are not a service. Each service exposes `/api/v1/admin/...`
+routes protected by granular permissions; the admin web app talks to them via
+the gateway. Read-side aggregation (platform metrics, the cross-service activity
+log, personal dashboards) lives in the **dashboard** service, a read-only BFF fed
+by events (ADR-0010).
 
 **Search** lives in each owning service (Postgres FTS + `pg_trgm` + GIN on
 JSONB) behind a `SearchIndex` port. A dedicated search service consuming

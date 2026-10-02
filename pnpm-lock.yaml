@@ -94,6 +94,51 @@ importers:
         specifier: ^12.1.3
         version: 12.1.3
 
+  services/bidding-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   services/catalog-service:
     dependencies:
       '@dorkar/contracts':
@@ -139,7 +184,97 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  services/dashboard-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   services/demand-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
+  services/dispute-service:
     dependencies:
       '@dorkar/contracts':
         specifier: workspace:*
@@ -280,6 +415,51 @@ importers:
         specifier: ^4.6.5
         version: 4.6.5
 
+  services/lending-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
   services/matching-service:
     dependencies:
       '@dorkar/contracts':
@@ -378,6 +558,51 @@ importers:
       sharp:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@24.19.0)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
+  services/messaging-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -518,6 +743,51 @@ importers:
         version: 4.6.5
 
   services/profile-service:
+    dependencies:
+      '@dorkar/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@dorkar/kernel':
+        specifier: workspace:*
+        version: link:../../packages/kernel
+      '@fastify/cors':
+        specifier: ^11.3.0
+        version: 11.3.0
+      '@fastify/helmet':
+        specifier: ^13.1.1
+        version: 13.1.1
+      '@fastify/swagger':
+        specifier: ^9.9.1
+        version: 9.9.1
+      '@fastify/swagger-ui':
+        specifier: ^6.1.1
+        version: 6.1.1
+      fastify:
+        specifier: ^5.12.5
+        version: 5.12.5
+      fastify-type-provider-zod:
+        specifier: ^7.0.0
+        version: 7.0.0(@fastify/swagger@9.9.1)(fastify@5.12.5)(openapi-types@12.1.3)(zod@4.6.5)
+      ioredis:
+        specifier: ^5.11.1
+        version: 5.11.1
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
+      kysely:
+        specifier: ^0.29.6
+        version: 0.29.6
+      pg:
+        specifier: ^8.23.1
+        version: 8.23.1
+      pino:
+        specifier: ^10.3.1
+        version: 10.3.1
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
+
+  services/rental-service:
     dependencies:
       '@dorkar/contracts':
         specifier: workspace:*

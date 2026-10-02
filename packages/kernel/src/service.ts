@@ -61,6 +61,13 @@ export interface ServiceRuntime<DB extends KernelTables> {
   on<S extends z.ZodType>(
     def: EventDefinition<S>,
     handler: (payload: z.output<S>, event: EventEnvelope, trx: Transaction<DB>) => Promise<void>,
+    opts?: {
+      /**
+       * Streams to read this type from. Defaults to the type's prefix (`demand.X` → `demand`).
+       * Needed for types every service emits, e.g. `audit.ActivityRecorded`.
+       */
+      producers?: readonly string[];
+    },
   ): void;
   /** Run the registered handler for an envelope directly (tests, replays). Returns false if already processed. */
   deliver(event: EventEnvelope): Promise<boolean>;
@@ -119,7 +126,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
 
   const handlers = new Map<
     string,
-    { producer: string; parse: (p: unknown) => unknown; fn: Handler<DB> }
+    { producers: readonly string[]; parse: (p: unknown) => unknown; fn: Handler<DB> }
   >();
   const consumers: RedisStreamConsumer[] = [];
   const jobs: Array<{
@@ -172,10 +179,9 @@ export async function createServiceRuntime<DB extends KernelTables>(
     auth: createAuthenticator({ verifier }),
     internalOnly: requireInternal(config.INTERNAL_API_TOKEN),
     event: createEventFactory(opts.producer),
-    on(def, handler) {
-      const producer = def.type.split('.')[0]!;
+    on(def, handler, onOpts) {
       handlers.set(def.type, {
-        producer,
+        producers: onOpts?.producers ?? [def.type.split('.')[0]!],
         parse: (p) => def.schema.parse(p),
         fn: handler,
       });
@@ -187,7 +193,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
     async startWorkers() {
       if (config.OUTBOX_RELAY_ENABLED) relay.start();
       if (config.CONSUMERS_ENABLED) {
-        const producers = new Set([...handlers.values()].map((h) => h.producer));
+        const producers = new Set([...handlers.values()].flatMap((h) => h.producers));
         for (const producer of producers) {
           const consumer = new RedisStreamConsumer(
             createRedis(config.REDIS_URL, { keyPrefix: null, commandTimeoutMs: null, logger }),

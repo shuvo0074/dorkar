@@ -20,6 +20,11 @@ export const Permissions = [
   'listing:create',
   'review:create',
   'report:create',
+  'auction:create',
+  'bid:create',
+  'booking:create',
+  'lending:create',
+  'message:send',
   'sourcing:bulk',
   'user:read:basic',
   'user:suspend',
@@ -36,6 +41,8 @@ export const Permissions = [
   'role:grant',
   'verification:nid:read',
   'verification:nid:decide',
+  'dashboard:read',
+  'auction:manage',
 ] as const;
 export type Permission = (typeof Permissions)[number];
 
@@ -45,6 +52,11 @@ const MEMBER: Permission[] = [
   'listing:create',
   'review:create',
   'report:create',
+  'auction:create',
+  'bid:create',
+  'booking:create',
+  'lending:create',
+  'message:send',
 ];
 const MODERATOR: Permission[] = [
   'user:read:basic',
@@ -52,7 +64,12 @@ const MODERATOR: Permission[] = [
   'moderation:content:hide',
   'moderation:content:restore',
 ];
-const SUPPORT: Permission[] = ['user:read:basic', 'transaction:read:any', 'dispute:read'];
+const SUPPORT: Permission[] = [
+  'user:read:basic',
+  'transaction:read:any',
+  'dispute:read',
+  'dashboard:read',
+];
 const ADMIN: Permission[] = [
   ...MODERATOR,
   ...SUPPORT,
@@ -62,6 +79,7 @@ const ADMIN: Permission[] = [
   'category:manage',
   'policy:read',
   'audit:read',
+  'auction:manage',
 ];
 
 export const DEFAULT_ROLE_PERMISSIONS: Readonly<Record<Role, readonly Permission[]>> = {

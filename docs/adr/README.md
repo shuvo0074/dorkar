@@ -44,3 +44,23 @@ Short, immutable records. Supersede rather than edit.
 **Context**: access tokens are verified offline (ADR-0004), so logout, device revocation and bans only took effect when the token expired (≤ 10 min). Checking every request against identity would make identity a synchronous dependency of all traffic.
 **Decision**: identity emits revocation events through its outbox; the gateway consumes them (Redis Streams consumer group) into a Redis denylist keyed by session, device and account (`iat` cut-off), each entry living one access-token TTL. The gateway rejects denylisted tokens with `SESSION_REVOKED`. Services keep verifying signatures themselves.
 **Consequences**: cut-off in well under a second without a per-request call to identity. The denylist is bounded (only revocations within the last TTL). On Redis loss the check fails open and degrades to the old TTL bound. Services must only be reachable through the gateway.
+
+## ADR-0008 — Every kind of deal converges on the transaction service
+
+**Status**: accepted · 2026-10-02
+**Context**: Phase 2 adds three new ways to reach agreement (auction award, rental booking, loan approval). Giving each its own post-agreement lifecycle would triplicate hand-over, completion, disputes, reviews and notifications.
+**Decision**: bidding, rental and lending own how agreement is reached (bids, calendars and holds, borrow requests and trust gating) and emit one deal-creating event (`AuctionAwarded`, `BookingConfirmed`, `LoanApproved`). The transaction service creates exactly one transaction per source (`sourceType` AUCTION/BOOKING/LOAN, unique with `sourceId`) and owns everything after agreement. RENT and BORROW extend its state table with `HANDED_OVER → RETURN_REPORTED → RETURNED`, as 03-lifecycles §4 planned. The originating services mirror the transaction state from `TransactionStateChanged` for their own views (calendar release, loan history).
+**Consequences**: reviews, disputes, notifications and dashboards handle every deal the same way. The originating service and the transaction can briefly disagree (eventual consistency); the transaction is authoritative.
+
+## ADR-0009 — Disputes are a service; the transaction state machine stays the authority
+
+**Status**: accepted · 2026-10-02
+**Decision**: a party still opens a dispute through the transaction (`POST /transactions/:id/dispute`), which owns the dispute-window guards. The dispute service consumes `TransactionStateChanged → DISPUTED` and opens a case with evidence, statements, deadlines and staff assignment. Resolution and withdrawal are decided in the dispute service and applied by the transaction service from `DisputeResolved` / `DisputeWithdrawn`. The transaction service no longer exposes its own resolve endpoint.
+**Consequences**: one place for the case file and one place for state; a resolution is applied exactly once (inbox).
+
+## ADR-0010 — A dashboard service as the admin BFF, fed by events
+
+**Status**: accepted · 2026-10-02 · amends 01-architecture §2 ("Admin is not a service")
+**Context**: the admin dashboard needs platform-wide numbers and one activity log across all services. Fanning out to 18 services per page would couple the dashboard to every service's availability and make cross-service filters and ordering expensive.
+**Decision**: the kernel publishes every audit record as `audit.ActivityRecorded` through the outbox, in the same transaction as the audited change. The dashboard service consumes it from every producer's stream into an indexed activity log, and consumes domain events into daily metric counters and per-user summaries. Admin write actions stay in the owning services.
+**Consequences**: the activity log and metrics are read models: eventually consistent (normally under a second), rebuildable by replaying streams, and the dashboard can be down without affecting any write path. Audit records stay authoritative in each service.

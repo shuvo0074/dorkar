@@ -7,6 +7,11 @@ export const PolicyActions = [
   'NEED_PUBLISH',
   'OFFER_SUBMIT',
   'TRANSACTION_CREATE',
+  'AUCTION_CREATE',
+  'BID_PLACE',
+  'BOOKING_CREATE',
+  'LEND_ITEM_PUBLISH',
+  'LOAN_REQUEST',
   'ANY',
 ] as const;
 export type PolicyAction = (typeof PolicyActions)[number];

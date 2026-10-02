@@ -34,6 +34,12 @@ export const gatewayEnvSchema = baseEnvSchema
     UPSTREAM_MODERATION_URL: z.url().optional(),
     UPSTREAM_NOTIFICATION_URL: z.url().optional(),
     UPSTREAM_MEDIA_URL: z.url().optional(),
+    UPSTREAM_BIDDING_URL: z.url().optional(),
+    UPSTREAM_RENTAL_URL: z.url().optional(),
+    UPSTREAM_LENDING_URL: z.url().optional(),
+    UPSTREAM_DISPUTE_URL: z.url().optional(),
+    UPSTREAM_MESSAGING_URL: z.url().optional(),
+    UPSTREAM_DASHBOARD_URL: z.url().optional(),
 
     JWKS_URL: z.url().optional(),
     JWT_ISSUER: z.string().default('dorkar-identity'),

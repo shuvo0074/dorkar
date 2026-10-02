@@ -262,6 +262,10 @@ export const TransactionStates = [
   'CONFIRMED',
   'DELIVERY_PENDING',
   'DELIVERED',
+  // RENT / BORROW sub-flow (03-lifecycles §4): CONFIRMED → HANDED_OVER → RETURN_REPORTED → RETURNED
+  'HANDED_OVER',
+  'RETURN_REPORTED',
+  'RETURNED',
   'COMPLETED',
   'CANCELLED',
   'DISPUTED',
@@ -270,15 +274,21 @@ export const TransactionStates = [
 ] as const;
 export type TransactionState = (typeof TransactionStates)[number];
 
+/** What a transaction was created from. The (sourceType, sourceId) pair is unique except LISTING. */
+export const TransactionSourceTypes = ['OFFER', 'LISTING', 'AUCTION', 'BOOKING', 'LOAN'] as const;
+export type TransactionSourceType = (typeof TransactionSourceTypes)[number];
+
 export const TransactionEvents = {
   TransactionCreated: {
     type: 'transaction.TransactionCreated',
     version: 1,
     schema: z.object({
       transactionId: id,
-      sourceType: z.enum(['OFFER', 'LISTING']),
+      sourceType: z.enum(TransactionSourceTypes),
       sourceId: id,
       needId: id.nullable(),
+      /** The listing the deal consumes stock from, when there is one. */
+      listingId: id.nullable().optional(),
       buyerId: id,
       sellerId: id,
       amount: MoneySchema,
@@ -292,13 +302,16 @@ export const TransactionEvents = {
     schema: z.object({
       transactionId: id,
       needId: id.nullable(),
-      sourceType: z.enum(['OFFER', 'LISTING']),
+      sourceType: z.enum(TransactionSourceTypes),
       sourceId: id,
       buyerId: id,
       sellerId: id,
       from: z.enum(TransactionStates),
       to: z.enum(TransactionStates),
       actorId: id.nullable(),
+      mode: z.enum(NeedModes).optional(),
+      /** Free-text reason for cancel/dispute transitions (never PII; contact info is rejected). */
+      reason: z.string().max(500).nullable().optional(),
     }),
   },
 } as const;
@@ -333,7 +346,16 @@ export const ReputationEvents = {
 
 // ---------------------------------------------------------------- moderation
 
-export const ModerationTargets = ['LISTING', 'NEED', 'OFFER', 'REVIEW', 'USER'] as const;
+export const ModerationTargets = [
+  'LISTING',
+  'NEED',
+  'OFFER',
+  'REVIEW',
+  'USER',
+  'MESSAGE',
+  'AUCTION',
+  'LEND_ITEM',
+] as const;
 
 export const ModerationEvents = {
   /** A moderator decision the owning service must apply (hide/restore its own record). */
@@ -353,7 +375,16 @@ export const ModerationEvents = {
 
 // ---------------------------------------------------------------- media
 
-export const MediaPurposes = ['LISTING', 'NEED', 'OFFER', 'AVATAR', 'VERIFICATION'] as const;
+export const MediaPurposes = [
+  'LISTING',
+  'NEED',
+  'OFFER',
+  'AVATAR',
+  'VERIFICATION',
+  'MESSAGE',
+  'DISPUTE',
+  'LEND_ITEM',
+] as const;
 
 export const MediaEvents = {
   MediaReady: {
