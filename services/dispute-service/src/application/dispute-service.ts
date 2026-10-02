@@ -41,6 +41,7 @@ import type {
   DisputeStore,
   DisputeUnitOfWork,
   Loaded,
+  MediaAccess,
   PartyListQuery,
   TransitionPatch,
 } from './ports';
@@ -147,6 +148,7 @@ export class DisputeService {
     private readonly uow: DisputeUnitOfWork,
     private readonly event: ServiceRuntime<never>['event'],
     private readonly settings: DisputeSettings,
+    private readonly media: MediaAccess,
   ) {}
 
   // ---------------------------------------------------------------- event handlers (inbox trx)
@@ -340,6 +342,20 @@ export class DisputeService {
     const mediaIds = dedupe(input.mediaIds ?? []);
     assertEvidenceNotEmpty(text, mediaIds);
     assertNoContactInfo('evidence', text);
+    if (mediaIds.length) {
+      // Parties never change, so a read outside the transaction is safe for the grant, which
+      // is a network call and refuses media the author doesn't own. Staff read by permission.
+      const d = await this.loadVisible(this.uow.store, id, actor);
+      await this.media.grant(
+        {
+          ownerId: actor.id,
+          mediaIds,
+          accountIds: [d.buyerId, d.sellerId].filter((a) => a !== actor.id),
+          purpose: 'DISPUTE',
+        },
+        ctx,
+      );
+    }
     return this.uow.transaction(async (s) => {
       const d = await this.loadVisible(s, id, actor);
       const role = this.authorRole(d, actor);

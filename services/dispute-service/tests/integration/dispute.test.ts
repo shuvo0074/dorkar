@@ -10,11 +10,20 @@ let t: TestService<Awaited<ReturnType<typeof buildDisputeService>>>;
 const app = () => t.svc.runtime.app;
 const db = () => t.svc.runtime.db;
 
+/** Records media grants instead of calling media-service. */
+const grants: Array<{
+  ownerId: string;
+  mediaIds: string[];
+  accountIds: string[];
+  purpose: string;
+}> = [];
+const media = { grant: async (g: (typeof grants)[number]) => void grants.push(g) };
+
 beforeAll(async () => {
   t = await startTestService({
     schemaPrefix: 'dispute',
     migrations,
-    build: (env, logger, verifier) => buildDisputeService(env, logger, { verifier }),
+    build: (env, logger, verifier) => buildDisputeService(env, logger, { verifier, media }),
   });
 });
 afterAll(() => t.close());
@@ -359,6 +368,12 @@ describe('evidence', () => {
       (await post(url, c.buyerId, { text: 'Screen is cracked', mediaIds: [...media, media[0]] }))
         .statusCode,
     ).toBe(200);
+    expect(grants.at(-1)).toEqual({
+      ownerId: c.buyerId,
+      mediaIds: media,
+      accountIds: [c.sellerId],
+      purpose: 'DISPUTE',
+    });
     expect((await post(url, c.sellerId, { mediaIds: [randomUUID()] })).statusCode).toBe(200);
     expect(
       (await post(url, randomUUID(), { text: 'Courier report attached' }, { roles: SUPPORT }))

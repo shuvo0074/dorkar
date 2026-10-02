@@ -1,5 +1,6 @@
 import { TransactionEvents } from '@dorkar/contracts';
 import {
+  createInternalClient,
   createServiceRuntime,
   loadConfig,
   serviceEnvSchema,
@@ -11,6 +12,8 @@ import {
 import type { Kysely, Transaction } from 'kysely';
 import { z } from 'zod';
 import { DisputeService } from './application/dispute-service';
+import type { MediaAccess } from './application/ports';
+import { httpMediaAccess } from './infrastructure/http-media-access';
 import type { DisputeDB } from './infrastructure/db-schema';
 import { pgDisputeStore, pgDisputeUnitOfWork } from './infrastructure/pg-dispute-store';
 import { disputeRoutes } from './interfaces/http/routes';
@@ -21,6 +24,8 @@ export const disputeEnvSchema = serviceEnvSchema.extend({
   DATABASE_SCHEMA: z.string().default('dispute'),
   DISPUTE_RESPONSE_HOURS: z.coerce.number().positive().default(72),
   DISPUTE_UNASSIGNED_ESCALATION_HOURS: z.coerce.number().positive().default(24),
+  /** media-service, for evidence read grants. Unset → evidence with attachments is refused. */
+  MEDIA_URL: z.url().optional(),
 });
 
 type Job = (trx: Transaction<DisputeDB>) => Promise<number>;
@@ -29,7 +34,7 @@ type Job = (trx: Transaction<DisputeDB>) => Promise<number>;
 export async function buildDisputeService(
   env: Record<string, string | undefined>,
   logger: Logger,
-  overrides: { verifier?: AccessTokenVerifier } = {},
+  overrides: { verifier?: AccessTokenVerifier; media?: MediaAccess } = {},
 ): Promise<{
   runtime: ServiceRuntime<DisputeDB>;
   disputes: DisputeService;
@@ -48,10 +53,20 @@ export async function buildDisputeService(
     ...(overrides.verifier ? { verifier: overrides.verifier } : {}),
   });
 
-  const disputes = new DisputeService(pgDisputeUnitOfWork(runtime.db), runtime.event, {
-    responseHours: config.DISPUTE_RESPONSE_HOURS,
-    unassignedEscalationHours: config.DISPUTE_UNASSIGNED_ESCALATION_HOURS,
-  });
+  const disputes = new DisputeService(
+    pgDisputeUnitOfWork(runtime.db),
+    runtime.event,
+    {
+      responseHours: config.DISPUTE_RESPONSE_HOURS,
+      unassignedEscalationHours: config.DISPUTE_UNASSIGNED_ESCALATION_HOURS,
+    },
+    overrides.media ??
+      httpMediaAccess(
+        config.MEDIA_URL
+          ? createInternalClient({ baseUrl: config.MEDIA_URL, token: config.INTERNAL_API_TOKEN })
+          : null,
+      ),
+  );
 
   // Deal projection, and case opening/closing from the transaction's state (ADR-0009).
   runtime.on(TransactionEvents.TransactionCreated, (p, _e, trx) =>

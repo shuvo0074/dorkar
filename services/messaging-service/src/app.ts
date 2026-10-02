@@ -6,6 +6,7 @@ import {
   TransactionEvents,
 } from '@dorkar/contracts';
 import {
+  createInternalClient,
   createRedis,
   createServiceRuntime,
   loadConfig,
@@ -18,6 +19,8 @@ import {
 } from '@dorkar/kernel';
 import { z } from 'zod';
 import { MessagingService } from './application/messaging-service';
+import type { MediaAccess } from './application/ports';
+import { httpMediaAccess } from './infrastructure/http-media-access';
 import type { MessagingDB } from './infrastructure/db-schema';
 import { pgMessagingStore, pgMessagingUnitOfWork } from './infrastructure/pg-messaging-store';
 import { RedisMessageNotifier } from './infrastructure/redis-message-notifier';
@@ -30,13 +33,15 @@ export const messagingEnvSchema = serviceEnvSchema.extend({
   MESSAGING_SEND_PER_MINUTE: z.coerce.number().int().min(1).default(30),
   /** The gateway proxies with a 10s upstream timeout: a long poll must answer before that. */
   MESSAGING_LONG_POLL_MAX_SECONDS: z.coerce.number().int().min(0).max(9).default(8),
+  /** media-service, for attachment read grants. Unset → messages with attachments are refused. */
+  MEDIA_URL: z.url().optional(),
 });
 
 /** Composition root. Tests may replace the rate limiter. */
 export async function buildMessagingService(
   env: Record<string, string | undefined>,
   logger: Logger,
-  overrides: { verifier?: AccessTokenVerifier; limiter?: RateLimiter } = {},
+  overrides: { verifier?: AccessTokenVerifier; limiter?: RateLimiter; media?: MediaAccess } = {},
 ): Promise<{
   runtime: ServiceRuntime<MessagingDB>;
   messaging: MessagingService;
@@ -73,6 +78,12 @@ export async function buildMessagingService(
       longPollMaxSeconds: config.MESSAGING_LONG_POLL_MAX_SECONDS,
     },
     logger,
+    overrides.media ??
+      httpMediaAccess(
+        config.MEDIA_URL
+          ? createInternalClient({ baseUrl: config.MEDIA_URL, token: config.INTERNAL_API_TOKEN })
+          : null,
+      ),
   );
 
   // Context projections (each applied exactly once, in the inbox transaction; out-of-order

@@ -31,6 +31,7 @@ import type {
   Block,
   Conversation,
   ConversationForParticipant,
+  MediaAccess,
   MessageNotifier,
   MessagingStore,
   MessagingUnitOfWork,
@@ -66,6 +67,7 @@ export class MessagingService {
     private readonly notifier: MessageNotifier,
     private readonly settings: MessagingSettings,
     private readonly logger: Logger,
+    private readonly media: MediaAccess,
   ) {}
 
   // ------------------------------------------------------------------ conversations
@@ -155,6 +157,13 @@ export class MessagingService {
     ]);
     if (!rl.allowed) throw Errors.rateLimited(rl.retryAfterMs);
 
+    // Outside the DB transaction (network): refuses media the sender doesn't own.
+    const mediaIds = dedupe(input.mediaIds ?? []);
+    await this.media.grant(
+      { ownerId: actor.id, mediaIds, accountIds: [conv.otherId], purpose: 'MESSAGE' },
+      ctx,
+    );
+
     const result = await this.uow.transaction(async (s) => {
       const seq = await s.nextSeq(conv.id); // serializes sends in this conversation
       // Re-check under the lock: a concurrent retry with the same clientId may have won.
@@ -167,7 +176,7 @@ export class MessagingService {
         senderId: actor.id,
         clientId: input.clientId,
         body: input.body,
-        mediaIds: dedupe(input.mediaIds ?? []),
+        mediaIds,
       });
       await s.recordSent(message, conv.otherId);
       await s.outbox(

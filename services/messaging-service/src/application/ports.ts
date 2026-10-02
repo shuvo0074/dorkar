@@ -128,3 +128,16 @@ export interface MessageNotifier {
   /** Resolves once the subscription is live; call the returned function to stop listening. */
   subscribe(conversationId: string, onMessage: () => void): Promise<() => void>;
 }
+
+/** Lets the other side read private attachments (media-service read grants). */
+export interface MediaAccess {
+  grant(
+    input: {
+      ownerId: string;
+      mediaIds: string[];
+      accountIds: string[];
+      purpose: 'MESSAGE' | 'DISPUTE';
+    },
+    ctx: Pick<RequestContext, 'requestId' | 'correlationId'>,
+  ): Promise<void>;
+}

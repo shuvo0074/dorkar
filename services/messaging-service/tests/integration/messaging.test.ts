@@ -24,6 +24,15 @@ let t: TestService<Awaited<ReturnType<typeof buildMessagingService>>>;
 const app = () => t.svc.runtime.app;
 const db = () => t.svc.runtime.db;
 
+/** Records media grants instead of calling media-service. */
+const grants: Array<{
+  ownerId: string;
+  mediaIds: string[];
+  accountIds: string[];
+  purpose: string;
+}> = [];
+const media = { grant: async (g: (typeof grants)[number]) => void grants.push(g) };
+
 beforeAll(async () => {
   t = await startTestService({
     schemaPrefix: 'messaging',
@@ -32,7 +41,7 @@ beforeAll(async () => {
       MESSAGING_SEND_PER_MINUTE: String(SEND_LIMIT),
       MESSAGING_LONG_POLL_MAX_SECONDS: '3',
     },
-    build: (env, logger, verifier) => buildMessagingService(env, logger, { verifier }),
+    build: (env, logger, verifier) => buildMessagingService(env, logger, { verifier, media }),
   });
 });
 afterAll(() => t.close());
@@ -433,6 +442,14 @@ describe('sending', () => {
     });
     expect(withMedia.statusCode).toBe(201);
     expect(withMedia.json().data.mediaIds).toHaveLength(1);
+    // The other participant was granted read access to the attachment.
+    expect(grants.at(-1)).toMatchObject({
+      ownerId: buyer,
+      mediaIds: withMedia.json().data.mediaIds,
+      purpose: 'MESSAGE',
+    });
+    expect(grants.at(-1)!.accountIds).toHaveLength(1);
+    expect(grants.at(-1)!.accountIds[0]).not.toBe(buyer);
   });
 
   it('requires message:send', async () => {

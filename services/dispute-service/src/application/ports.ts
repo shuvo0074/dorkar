@@ -131,3 +131,16 @@ export interface DisputeUnitOfWork {
   readonly store: DisputeStore;
   transaction<T>(fn: (store: DisputeStore) => Promise<T>): Promise<T>;
 }
+
+/** Lets the other side read private attachments (media-service read grants). */
+export interface MediaAccess {
+  grant(
+    input: {
+      ownerId: string;
+      mediaIds: string[];
+      accountIds: string[];
+      purpose: 'MESSAGE' | 'DISPUTE';
+    },
+    ctx: Pick<RequestContext, 'requestId' | 'correlationId'>,
+  ): Promise<void>;
+}
