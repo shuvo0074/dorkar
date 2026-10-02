@@ -6,6 +6,7 @@ import type {
   NotificationPayload,
   NotificationType,
 } from '../domain/notification';
+import type { PushDevice, PushMessage, PushPlatform, PushTarget } from '../domain/push';
 
 export interface NewNotification {
   id: string;
@@ -14,7 +15,15 @@ export interface NewNotification {
   payload: NotificationPayload;
   sourceEventId: string;
   inApp: boolean;
+  coalesceKey: string | null;
 }
+
+export type MergeOutcome =
+  | { outcome: 'MERGED'; notificationId: string }
+  /** This (event, recipient, type) was already recorded, inserted or merged. */
+  | { outcome: 'DUPLICATE' }
+  /** No unread notification to merge into: insert a new one. */
+  | { outcome: 'NONE' };
 
 /** Everything the use cases need from storage, bound to one executor (autocommit or a transaction). */
 export interface NotificationStore {
@@ -23,6 +32,17 @@ export interface NotificationStore {
   queueDeliveries(
     rows: readonly { notificationId: string; channel: DeliveryChannel }[],
   ): Promise<void>;
+  /**
+   * Merges into the recipient's unread in-app notification with the same type and coalesce key
+   * (count + 1, newest payload facts, time bumped), recording the event for idempotency.
+   */
+  mergeIntoUnread(row: NewNotification & { coalesceKey: string }): Promise<MergeOutcome>;
+  /** Queues deliveries again for a merged notification: finished ones go back to PENDING. */
+  requeueDeliveries(
+    rows: readonly { notificationId: string; channel: DeliveryChannel }[],
+  ): Promise<void>;
+  /** Accounts among `accountIds` with at least one active push device. */
+  pushReachable(accountIds: readonly string[]): Promise<Set<string>>;
   /** Stored overrides only, for many accounts at once. */
   preferences(
     accountIds: readonly string[],
@@ -78,4 +98,49 @@ export interface ContactDirectory {
 
 export interface SmsChannel {
   send(toE164: string, text: string): Promise<void>;
+}
+
+// ------------------------------------------------------------------------------------ push
+
+export interface NewPushDevice {
+  id: string;
+  accountId: string;
+  platform: PushPlatform;
+  token: string;
+  tokenHash: string;
+}
+
+export interface PushDeviceStore {
+  /** Serialises registrations for one account (transaction-scoped). */
+  lockAccount(accountId: string): Promise<void>;
+  /**
+   * Upsert by token hash: re-registering refreshes it, and a token registered by another account
+   * moves to this one (fresh id). Returns the device and the previous owner when it moved.
+   */
+  register(d: NewPushDevice): Promise<{ device: PushDevice; previousOwnerId: string | null }>;
+  /** Deactivates all but the `keep` most recently registered active devices; returns how many. */
+  trimActive(accountId: string, keep: number): Promise<number>;
+  listActive(accountId: string): Promise<PushDevice[]>;
+  /** Deletes the account's device; false when it is not theirs. */
+  remove(id: string, accountId: string): Promise<boolean>;
+  /** Active devices with their tokens, for sending. */
+  targetsFor(accountId: string): Promise<PushTarget[]>;
+  deactivate(id: string, reason: 'INVALID_TOKEN'): Promise<void>;
+}
+
+export interface PushDeviceUnitOfWork {
+  readonly store: PushDeviceStore;
+  transaction<T>(fn: (store: PushDeviceStore) => Promise<T>): Promise<T>;
+}
+
+export type PushResult = { ok: true } | { invalidToken: true } | { retryable: true; error: string };
+
+/** A push provider (FCM, a dev file…). Must not throw for per-device outcomes. */
+export interface PushProvider {
+  send(device: PushTarget, message: PushMessage): Promise<PushResult>;
+}
+
+export interface PushThrottle {
+  /** True if `key` was free (and is now held for `windowMs`). */
+  acquire(key: string, windowMs: number): Promise<boolean>;
 }

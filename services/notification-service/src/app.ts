@@ -9,7 +9,9 @@ import {
 } from '@dorkar/kernel';
 import { z } from 'zod';
 import { NotificationService } from './application/notification-service';
-import type { ContactDirectory, SmsChannel } from './application/ports';
+import type { ContactDirectory, PushProvider, PushThrottle, SmsChannel } from './application/ports';
+import { PushDeviceService } from './application/push-devices';
+import { PushDispatcher } from './application/push-dispatcher';
 import { SmsDispatcher } from './application/sms-dispatcher';
 import { notificationRules } from './domain/rules';
 import type { NotificationDB } from './infrastructure/db-schema';
@@ -19,6 +21,9 @@ import {
   pgNotificationStore,
   pgNotificationUnitOfWork,
 } from './infrastructure/pg-notification-store';
+import { pgPushDeviceStore, pgPushDeviceUnitOfWork } from './infrastructure/pg-push-device-store';
+import { FcmPushProvider, parseServiceAccount } from './infrastructure/push/fcm-push-provider';
+import { FilePushProvider, RedisPushThrottle } from './infrastructure/push/push-providers';
 import { FileSmsChannel } from './infrastructure/sms/sms-channels';
 import { notificationRoutes } from './interfaces/http/routes';
 
@@ -39,6 +44,15 @@ export const notificationEnvSchema = serviceEnvSchema
     SMS_DISPATCH_INTERVAL_MS: int(3_000, 500),
     SMS_LEASE_MS: int(120_000, 10_000),
     NOTIFICATION_RETENTION_DAYS: int(90),
+    /** `none` disables push entirely (no deliveries queued, no sender job). */
+    PUSH_PROVIDER: z.enum(['none', 'file', 'fcm']).default('file'),
+    PUSH_FILE_PATH: z.string().default('var/notification-push.log'),
+    /** Base64 of the Firebase service-account JSON (required for `fcm`). A secret. */
+    FCM_SERVICE_ACCOUNT_JSON: z.string().optional(),
+    PUSH_MAX_ATTEMPTS: int(5).pipe(z.number().max(20)),
+    PUSH_BATCH_SIZE: int(50).pipe(z.number().max(500)),
+    PUSH_DISPATCH_INTERVAL_MS: int(2_000, 500),
+    PUSH_LEASE_MS: int(120_000, 10_000),
   })
   .superRefine((c, ctx) => {
     if (c.NODE_ENV === 'production' && c.SMS_PROVIDER === 'file') {
@@ -48,18 +62,58 @@ export const notificationEnvSchema = serviceEnvSchema
         message: 'the file SMS provider is for development/staging only; configure a real provider',
       });
     }
+    if (c.NODE_ENV === 'production' && c.PUSH_PROVIDER === 'file') {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PUSH_PROVIDER'],
+        message: 'the file push provider is for development/staging only; use fcm (or none)',
+      });
+    }
+    if (c.PUSH_PROVIDER === 'fcm') {
+      try {
+        parseServiceAccount(c.FCM_SERVICE_ACCOUNT_JSON ?? '');
+      } catch {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['FCM_SERVICE_ACCOUNT_JSON'],
+          message: 'fcm needs FCM_SERVICE_ACCOUNT_JSON: base64 of a service-account JSON',
+        });
+      }
+    }
   });
 export type NotificationConfig = z.infer<typeof notificationEnvSchema>;
 
-/** Composition root. Tests replace the contact lookup and the SMS channel. */
+function pushProviderFor(config: NotificationConfig): PushProvider | null {
+  switch (config.PUSH_PROVIDER) {
+    case 'none':
+      return null;
+    case 'file':
+      return new FilePushProvider(config.PUSH_FILE_PATH);
+    case 'fcm':
+      return new FcmPushProvider({
+        serviceAccount: parseServiceAccount(config.FCM_SERVICE_ACCOUNT_JSON ?? ''),
+        publicBaseUrl: config.PUBLIC_BASE_URL,
+      });
+  }
+}
+
+/** Composition root. Tests replace the contact lookup, the SMS channel and the push provider. */
 export async function buildNotificationService(
   env: Record<string, string | undefined>,
   logger: Logger,
-  overrides: { verifier?: AccessTokenVerifier; contacts?: ContactDirectory; sms?: SmsChannel } = {},
+  overrides: {
+    verifier?: AccessTokenVerifier;
+    contacts?: ContactDirectory;
+    sms?: SmsChannel;
+    push?: PushProvider;
+    pushThrottle?: PushThrottle;
+  } = {},
 ): Promise<{
   runtime: ServiceRuntime<NotificationDB>;
   notifications: NotificationService;
   dispatcher: SmsDispatcher;
+  pushDispatcher: PushDispatcher | null;
+  pushDevices: PushDeviceService;
   config: NotificationConfig;
 }> {
   const config = loadConfig(notificationEnvSchema, env);
@@ -74,7 +128,26 @@ export async function buildNotificationService(
     ...(overrides.verifier ? { verifier: overrides.verifier } : {}),
   });
 
-  const notifications = new NotificationService(pgNotificationUnitOfWork(runtime.db));
+  const push = overrides.push ?? pushProviderFor(config);
+  const notifications = new NotificationService(pgNotificationUnitOfWork(runtime.db), {
+    pushEnabled: push !== null,
+  });
+  const pushDevices = new PushDeviceService(pgPushDeviceUnitOfWork(runtime.db), logger);
+  const pushDispatcher = push
+    ? new PushDispatcher({
+        deliveries: pgDeliveryStore(runtime.db),
+        notifications: pgNotificationStore(runtime.db),
+        devices: pgPushDeviceStore(runtime.db),
+        push,
+        throttle: overrides.pushThrottle ?? new RedisPushThrottle(runtime.redis),
+        logger,
+        settings: {
+          batchSize: config.PUSH_BATCH_SIZE,
+          maxAttempts: config.PUSH_MAX_ATTEMPTS,
+          leaseMs: config.PUSH_LEASE_MS,
+        },
+      })
+    : null;
   const dispatcher = new SmsDispatcher({
     deliveries: pgDeliveryStore(runtime.db),
     notifications: pgNotificationStore(runtime.db),
@@ -105,13 +178,19 @@ export async function buildNotificationService(
   runtime.every('notification.sms-dispatch', config.SMS_DISPATCH_INTERVAL_MS, () =>
     dispatcher.runOnce(),
   );
+  if (pushDispatcher) {
+    runtime.every('notification.push-dispatch', config.PUSH_DISPATCH_INTERVAL_MS, () =>
+      pushDispatcher.runOnce(),
+    );
+  }
   runtime.every('notification.retention', 60 * 60_000, (trx) =>
     notifications.purge(pgNotificationStore(trx), config.NOTIFICATION_RETENTION_DAYS),
   );
 
   await runtime.app.register(notificationRoutes, {
     notifications,
+    pushDevices,
     runtime: runtime as unknown as ServiceRuntime<never>,
   });
-  return { runtime, notifications, dispatcher, config };
+  return { runtime, notifications, dispatcher, pushDispatcher, pushDevices, config };
 }

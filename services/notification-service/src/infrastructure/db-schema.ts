@@ -6,6 +6,7 @@ import type {
   NotificationPayload,
   NotificationType,
 } from '../domain/notification';
+import type { PushPlatform } from '../domain/push';
 
 export interface NotificationDB extends KernelTables {
   notifications: {
@@ -18,12 +19,21 @@ export interface NotificationDB extends KernelTables {
     in_app: Generated<boolean>;
     read_at: Date | null;
     created_at: Generated<Date>;
+    coalesce_key: string | null;
+  };
+  notification_merged_events: {
+    source_event_id: string;
+    recipient_id: string;
+    type: NotificationType;
+    notification_id: string;
+    created_at: Generated<Date>;
   };
   notification_preferences: {
     account_id: string;
     type: NotificationType;
     in_app: boolean;
     sms: boolean;
+    push: Generated<boolean>;
     updated_at: Generated<Date>;
   };
   deliveries: {
@@ -37,5 +47,17 @@ export interface NotificationDB extends KernelTables {
     sent_at: Date | null;
     created_at: Generated<Date>;
     updated_at: Generated<Date>;
+  };
+  push_devices: {
+    id: string;
+    account_id: string;
+    platform: PushPlatform;
+    token: string;
+    token_hash: string;
+    active: Generated<boolean>;
+    deactivated_at: Date | null;
+    deactivation_reason: 'LIMIT' | 'INVALID_TOKEN' | null;
+    created_at: Generated<Date>;
+    last_registered_at: Generated<Date>;
   };
 }

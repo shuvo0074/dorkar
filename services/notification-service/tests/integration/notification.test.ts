@@ -13,6 +13,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { migrations } from '../../migrations';
 import type { ContactDirectory } from '../../src/application/ports';
 import { buildNotificationService } from '../../src/app';
+import { NotificationTypes } from '../../src/domain/notification';
 import { pgNotificationStore } from '../../src/infrastructure/pg-notification-store';
 import { RecordingSmsChannel } from '../../src/infrastructure/sms/sms-channels';
 
@@ -597,14 +598,27 @@ describe('preferences', () => {
     const headers = await t.auth.as(me);
     const res = await app().inject({ url: '/api/v1/me/notifications/preferences', headers });
     expect(res.statusCode).toBe(200);
-    const prefs = res.json().data as { type: string; inApp: boolean; sms: boolean }[];
-    expect(prefs).toHaveLength(12);
+    const prefs = res.json().data as {
+      type: string;
+      inApp: boolean;
+      sms: boolean;
+      push: boolean;
+    }[];
+    expect(prefs).toHaveLength(NotificationTypes.length);
     expect(
       prefs
         .filter((p) => p.sms)
         .map((p) => p.type)
         .sort(),
-    ).toEqual(['OFFER_ACCEPTED', 'OFFER_RECEIVED', 'TRANSACTION_CREATED']);
+    ).toEqual([
+      'AUCTION_WON',
+      'BOOKING_CONFIRMED',
+      'DISPUTE_OPENED',
+      'OFFER_ACCEPTED',
+      'OFFER_RECEIVED',
+      'TRANSACTION_CREATED',
+    ]);
+    expect(prefs.every((p) => p.push && p.inApp)).toBe(true);
 
     const put = await app().inject({
       method: 'PUT',
@@ -622,6 +636,7 @@ describe('preferences', () => {
       type: 'NEED_MATCHED',
       inApp: true,
       sms: true,
+      push: true,
     });
     const stored = await db()
       .selectFrom('notification_preferences')

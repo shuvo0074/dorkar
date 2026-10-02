@@ -3,6 +3,7 @@ import { sql, type Kysely, type Selectable, type Transaction } from 'kysely';
 import type {
   ClaimedDelivery,
   DeliveryStore,
+  MergeOutcome,
   NotificationStore,
   NotificationUnitOfWork,
 } from '../application/ports';
@@ -38,6 +39,7 @@ export function pgNotificationStore(db: Executor): NotificationStore {
             payload: JSON.stringify(r.payload),
             source_event_id: r.sourceEventId,
             in_app: r.inApp,
+            coalesce_key: r.coalesceKey,
           })),
         )
         .onConflict((oc) => oc.columns(['source_event_id', 'recipient_id', 'type']).doNothing())
@@ -63,17 +65,107 @@ export function pgNotificationStore(db: Executor): NotificationStore {
         .execute();
     },
 
+    async mergeIntoUnread(row): Promise<MergeOutcome> {
+      const DUPLICATE = { outcome: 'DUPLICATE' } as const;
+      const seen = await db
+        .selectFrom('notifications')
+        .select('id')
+        .where('source_event_id', '=', row.sourceEventId)
+        .where('recipient_id', '=', row.recipientId)
+        .where('type', '=', row.type)
+        .executeTakeFirst();
+      if (seen) return DUPLICATE;
+      const target = await db
+        .selectFrom('notifications')
+        .select('id')
+        .where('recipient_id', '=', row.recipientId)
+        .where('type', '=', row.type)
+        .where('coalesce_key', '=', row.coalesceKey)
+        .where('in_app', '=', true)
+        .where('read_at', 'is', null)
+        .forUpdate()
+        .executeTakeFirst();
+      if (!target) return { outcome: 'NONE' };
+      const recorded = await db
+        .insertInto('notification_merged_events')
+        .values({
+          source_event_id: row.sourceEventId,
+          recipient_id: row.recipientId,
+          type: row.type,
+          notification_id: target.id,
+        })
+        .onConflict((oc) => oc.columns(['source_event_id', 'recipient_id', 'type']).doNothing())
+        .returning('notification_id')
+        .executeTakeFirst();
+      if (!recorded) return DUPLICATE;
+      // Newest facts win; the count grows; the time moves so it surfaces at the top again.
+      await db
+        .updateTable('notifications')
+        .set({
+          payload: sql<string>`payload || ${JSON.stringify(row.payload)}::jsonb || jsonb_build_object(
+            'count',
+            case when jsonb_typeof(payload->'count') = 'number' then (payload->>'count')::int else 1 end + 1
+          )`,
+          created_at: sql<Date>`now()`,
+        })
+        .where('id', '=', target.id)
+        .execute();
+      return { outcome: 'MERGED', notificationId: target.id };
+    },
+
+    async requeueDeliveries(rows) {
+      if (rows.length === 0) return;
+      await db
+        .insertInto('deliveries')
+        .values(
+          rows.map((r) => ({
+            id: uuidv7(),
+            notification_id: r.notificationId,
+            channel: r.channel,
+            last_error: null,
+            sent_at: null,
+          })),
+        )
+        .onConflict((oc) =>
+          oc
+            .columns(['notification_id', 'channel'])
+            .doUpdateSet({
+              status: 'PENDING',
+              attempts: 0,
+              next_attempt_at: sql<Date>`now()`,
+              last_error: null,
+              sent_at: null,
+              updated_at: sql<Date>`now()`,
+            })
+            // A delivery still pending (or in flight) will carry the merged notification.
+            .where('deliveries.status', '<>', 'PENDING'),
+        )
+        .execute();
+    },
+
+    async pushReachable(accountIds) {
+      if (accountIds.length === 0) return new Set();
+      const rows = await db
+        .selectFrom('push_devices')
+        .select('account_id')
+        .distinct()
+        .where('account_id', 'in', accountIds)
+        .where('active', '=', true)
+        .execute();
+      return new Set(rows.map((r) => r.account_id));
+    },
+
     async preferences(accountIds) {
       const out = new Map<string, Map<NotificationType, ChannelPreference>>();
       if (accountIds.length === 0) return out;
       const rows = await db
         .selectFrom('notification_preferences')
-        .select(['account_id', 'type', 'in_app', 'sms'])
+        .select(['account_id', 'type', 'in_app', 'sms', 'push'])
         .where('account_id', 'in', accountIds)
         .execute();
       for (const r of rows) {
         const m = out.get(r.account_id) ?? new Map<NotificationType, ChannelPreference>();
-        m.set(r.type, { inApp: r.in_app, sms: r.sms });
+        m.set(r.type, { inApp: r.in_app, sms: r.sms, push: r.push });
         out.set(r.account_id, m);
       }
       return out;
@@ -96,12 +188,14 @@ export function pgNotificationStore(db: Executor): NotificationStore {
               type: p.type,
               in_app: p.inApp,
               sms: p.sms,
+              push: p.push,
             })),
           )
           .onConflict((oc) =>
             oc.columns(['account_id', 'type']).doUpdateSet((eb) => ({
               in_app: eb.ref('excluded.in_app'),
               sms: eb.ref('excluded.sms'),
+              push: eb.ref('excluded.push'),
               updated_at: sql<Date>`now()`,
             })),
           )

@@ -39,7 +39,7 @@ describe('event → notification rules', () => {
   it('registers one rule per consumed event, each from another producer', () => {
     const types = notificationRules.map((r) => r.def.type);
     expect(new Set(types).size).toBe(types.length);
-    expect(types).toHaveLength(10);
+    expect(types).toHaveLength(23); // 10 MVP + 13 Phase 2
     expect(types.every((t) => !t.startsWith('notification.'))).toBe(true);
   });
 

@@ -13,16 +13,24 @@ import {
 import { afterFailure, formatTaka, renderSms, retryDelayMs } from '../../src/domain/sms';
 
 describe('preferences', () => {
-  it('defaults: in-app on for all; SMS only for offer received/accepted and new deals', () => {
+  it('defaults: in-app and push on for all; SMS only for the critical moments', () => {
     const smsOn = NotificationTypes.filter((t) => defaultPreference(t).sms);
-    expect(smsOn.sort()).toEqual(['OFFER_ACCEPTED', 'OFFER_RECEIVED', 'TRANSACTION_CREATED']);
+    expect(smsOn.sort()).toEqual([
+      'AUCTION_WON',
+      'BOOKING_CONFIRMED',
+      'DISPUTE_OPENED',
+      'OFFER_ACCEPTED',
+      'OFFER_RECEIVED',
+      'TRANSACTION_CREATED',
+    ]);
     expect(NotificationTypes.every((t) => defaultPreference(t).inApp)).toBe(true);
+    expect(NotificationTypes.every((t) => defaultPreference(t).push)).toBe(true);
   });
 
   it('overrides win; every type is always present', () => {
     const overrides = new Map<NotificationType, ChannelPreference>([
-      ['OFFER_RECEIVED', { inApp: true, sms: false }],
-      ['REVIEW_RECEIVED', { inApp: false, sms: true }],
+      ['OFFER_RECEIVED', { inApp: true, sms: false, push: true }],
+      ['REVIEW_RECEIVED', { inApp: false, sms: true, push: false }],
     ]);
     const eff = effectivePreferences(overrides);
     expect(eff.map((p) => p.type)).toEqual([...NotificationTypes]);
@@ -30,22 +38,30 @@ describe('preferences', () => {
       type: 'OFFER_RECEIVED',
       inApp: true,
       sms: false,
+      push: true,
     });
     expect(eff.find((p) => p.type === 'REVIEW_RECEIVED')).toMatchObject({
       inApp: false,
       sms: true,
+      push: false,
     });
     expect(eff.find((p) => p.type === 'OFFER_ACCEPTED')).toMatchObject({ inApp: true, sms: true });
   });
 
   it('knows when a setting equals the default (so it need not be stored)', () => {
-    expect(isDefaultPreference('OFFER_RECEIVED', { inApp: true, sms: true })).toBe(true);
-    expect(isDefaultPreference('NEED_MATCHED', { inApp: true, sms: true })).toBe(false);
+    expect(isDefaultPreference('OFFER_RECEIVED', { inApp: true, sms: true, push: true })).toBe(
+      true,
+    );
+    expect(isDefaultPreference('NEED_MATCHED', { inApp: true, sms: true, push: true })).toBe(false);
+    expect(isDefaultPreference('NEED_MATCHED', { inApp: true, sms: false, push: false })).toBe(
+      false,
+    );
   });
 
   it('maps preferences to out-of-band channels', () => {
-    expect(channelsFor({ inApp: true, sms: true })).toEqual(['SMS']);
-    expect(channelsFor({ inApp: true, sms: false })).toEqual([]);
+    expect(channelsFor({ inApp: true, sms: true, push: false })).toEqual(['SMS']);
+    expect(channelsFor({ inApp: true, sms: false, push: false })).toEqual([]);
+    expect(channelsFor({ inApp: true, sms: true, push: true })).toEqual(['SMS', 'PUSH']);
   });
 });
 

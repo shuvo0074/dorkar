@@ -2,11 +2,13 @@ import { MoneySchema } from '@dorkar/contracts';
 import { ok, type FastifyPluginAsyncZod, type ServiceRuntime } from '@dorkar/kernel';
 import { z } from 'zod';
 import type { NotificationService } from '../../application/notification-service';
+import type { PushDeviceService } from '../../application/push-devices';
 import {
   NotificationTypes,
   type EffectivePreference,
   type Notification,
 } from '../../domain/notification';
+import { PushPlatforms, type PushDevice } from '../../domain/push';
 
 const iso = z.codec(z.iso.datetime({ offset: true }), z.date(), {
   decode: (s) => new Date(s),
@@ -54,11 +56,36 @@ const Preference = z.object({
   type: z.enum(NotificationTypes),
   inApp: z.boolean(),
   sms: z.boolean(),
+  push: z.boolean(),
 });
 const toPreference = (p: EffectivePreference): z.output<typeof Preference> => ({
   type: p.type,
   inApp: p.inApp,
   sms: p.sms,
+  push: p.push,
+});
+
+const PushDeviceDto = z.object({
+  id: z.uuid(),
+  platform: z.enum(PushPlatforms),
+  createdAt: iso,
+  lastRegisteredAt: iso,
+});
+const toDeviceDto = (d: PushDevice): z.output<typeof PushDeviceDto> => ({
+  id: d.id,
+  platform: d.platform,
+  createdAt: d.createdAt,
+  lastRegisteredAt: d.lastRegisteredAt,
+});
+
+const RegisterDeviceBody = z.strictObject({
+  platform: z.enum(PushPlatforms),
+  /** FCM registration token (opaque; never echoed back). */
+  token: z
+    .string()
+    .min(8)
+    .max(4096)
+    .regex(/^[\x21-\x7e]+$/, 'Invalid token.'),
 });
 
 const ListQuery = z.strictObject({
@@ -73,7 +100,13 @@ const ListQuery = z.strictObject({
 const PreferencesBody = z.strictObject({
   items: z
     .array(
-      z.strictObject({ type: z.enum(NotificationTypes), inApp: z.boolean(), sms: z.boolean() }),
+      z.strictObject({
+        type: z.enum(NotificationTypes),
+        inApp: z.boolean(),
+        sms: z.boolean(),
+        /** Optional for clients that predate push: omitted keeps the current setting. */
+        push: z.boolean().optional(),
+      }),
     )
     .min(1)
     .max(NotificationTypes.length),
@@ -81,12 +114,13 @@ const PreferencesBody = z.strictObject({
 
 export interface NotificationRouteDeps {
   notifications: NotificationService;
+  pushDevices: PushDeviceService;
   runtime: ServiceRuntime<never>;
 }
 
 export const notificationRoutes: FastifyPluginAsyncZod<NotificationRouteDeps> = async (
   app,
-  { notifications, runtime },
+  { notifications, pushDevices, runtime },
 ) => {
   const { authenticate } = runtime.auth;
   const secured = { tags: ['notifications'], security: [{ bearerAuth: [] }] };
@@ -179,5 +213,52 @@ export const notificationRoutes: FastifyPluginAsyncZod<NotificationRouteDeps> = 
     },
     async (req) =>
       ok((await notifications.setPreferences(req.body.items, req.ctx)).map(toPreference)),
+  );
+
+  app.post(
+    '/api/v1/me/notifications/push-devices',
+    {
+      preHandler: authenticate,
+      schema: {
+        ...secured,
+        summary: 'Register (or refresh) this device for push notifications',
+        description:
+          'Idempotent per token. A token registered by another account moves to the caller. ' +
+          'At most 10 active devices per account; the least recently registered is deactivated.',
+        body: RegisterDeviceBody,
+        response: { 200: z.object({ data: PushDeviceDto }), ...errors },
+      },
+    },
+    async (req) => ok(toDeviceDto(await pushDevices.register(req.body, req.ctx))),
+  );
+
+  app.get(
+    '/api/v1/me/notifications/push-devices',
+    {
+      preHandler: authenticate,
+      schema: {
+        ...secured,
+        summary: 'My active push devices',
+        response: { 200: z.object({ data: z.array(PushDeviceDto) }), ...errors },
+      },
+    },
+    async (req) => ok((await pushDevices.list(req.ctx)).map(toDeviceDto)),
+  );
+
+  app.delete(
+    '/api/v1/me/notifications/push-devices/:id',
+    {
+      preHandler: authenticate,
+      schema: {
+        ...secured,
+        summary: 'Unregister a push device (e.g. on sign-out)',
+        params: z.strictObject({ id: z.uuid() }),
+        response: { 204: z.null(), ...errors },
+      },
+    },
+    async (req, reply) => {
+      await pushDevices.remove(req.params.id, req.ctx);
+      return reply.status(204).send(null);
+    },
   );
 };

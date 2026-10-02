@@ -1,4 +1,5 @@
 import type { Money } from '@dorkar/contracts';
+import { copyFor } from './copy';
 import type { Notification, NotificationPayload, PayloadValue } from './notification';
 
 const isMoney = (v: PayloadValue | undefined): v is Money =>
@@ -16,9 +17,6 @@ const amount = (p: NotificationPayload, key: string): string | null => {
   const v = p[key];
   return isMoney(v) ? formatTaka(v) : null;
 };
-
-const words = (v: PayloadValue | undefined): string =>
-  typeof v === 'string' ? v.toLowerCase().replace(/_/g, ' ') : '';
 
 /** "https://dorkar.com.bd/" → "dorkar.com.bd": SMS links stay short and look like our domain. */
 export const shortHost = (baseUrl: string): string =>
@@ -52,7 +50,7 @@ function body(n: Notification): string {
         : 'A new deal was created.';
     }
     case 'TRANSACTION_UPDATED':
-      return `Your deal is now ${words(p['to']) || 'updated'}.`;
+      return copyFor(n).body;
     case 'NEED_EXPIRED':
       return 'Your request has expired. You can renew it in the app.';
     case 'NEED_FULFILLING':
@@ -63,6 +61,9 @@ function body(n: Notification): string {
       return p['status'] === 'VERIFIED'
         ? 'Your NID verification is approved.'
         : 'Your NID verification was not approved. See the app for details.';
+    default:
+      // Phase 2 types share the push copy: no amounts, names or free text.
+      return copyFor(n).body;
   }
 }
 
