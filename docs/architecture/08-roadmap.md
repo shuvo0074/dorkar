@@ -31,19 +31,19 @@ have a presence and matching has supply, but the UX leads with the Need.
 
 ## 3. Module-by-module plan
 
-| #   | Module                                         | Status  |
-| --- | ---------------------------------------------- | ------- |
-| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done |
-| 2   | Identity service                               | ✅ done |
-| 3   | Gateway                                        | ✅ done |
-| 4   | Profile + Verification                         | ✅ done |
-| 5   | Catalog                                        | ✅ done |
-| 6   | Demand + Matching                              | ✅ done |
-| 7   | Offer                                          | ✅ done |
-| 8   | Transaction                                    | ✅ done |
-| 9   | Reputation, Moderation, Notification, Media    | ✅ done |
-| 10  | Phase 2 (see below)                            | ✅ done |
-| 11  | Web app                                        | next    |
+| #   | Module                                         | Status                                               |
+| --- | ---------------------------------------------- | ---------------------------------------------------- |
+| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done                                              |
+| 2   | Identity service                               | ✅ done                                              |
+| 3   | Gateway                                        | ✅ done                                              |
+| 4   | Profile + Verification                         | ✅ done                                              |
+| 5   | Catalog                                        | ✅ done                                              |
+| 6   | Demand + Matching                              | ✅ done                                              |
+| 7   | Offer                                          | ✅ done                                              |
+| 8   | Transaction                                    | ✅ done                                              |
+| 9   | Reputation, Moderation, Notification, Media    | ✅ done                                              |
+| 10  | Phase 2 (see below)                            | ✅ done                                              |
+| 11  | Web app                                        | in progress: v1 (home, sign-in, account), dashboards |
 
 Phase 2 status:
 
@@ -61,4 +61,4 @@ Phase 2 status:
 
 Known follow-ups: S3 media storage and a production SMS provider (both behind ports, untested
 against real vendors); a `MediaDeleted` event; category deactivation cascading to listings;
-`listingId` on `TransactionCreated` so catalog can decrement stock for offer-driven deals.
+follow-ups listed in the Phase 2 review.

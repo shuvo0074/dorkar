@@ -30,6 +30,7 @@ Architecture, decisions and roadmap: [docs/README.md](docs/README.md). Rules for
 | `services/dispute-service`      | 4016 | Dispute cases: statements, evidence, deadlines, staff resolution                                                         |
 | `services/messaging-service`    | 4017 | Context-bound conversations, long-poll delivery, blocking; numbers stay private                                          |
 | `services/dashboard-service`    | 4018 | Admin dashboard: metrics, cross-service activity log; personal dashboard                                                 |
+| `apps/web`                      | 5173 | Web app (React + Vite): need composer, phone + OTP sign-in, account, dashboards; English and Bangla                      |
 | `infra/`                        |      | Docker Compose (generated), Postgres bootstrap, backup/restore scripts, k6 load tests                                    |
 
 ## Local development
@@ -42,6 +43,7 @@ pnpm dev:setup      # once (idempotent): .env.dev secrets, database, per-service
 pnpm dev:backend    # all 18 services + gateway with labelled logs; public API at http://localhost:4000
 pnpm e2e:backend    # in another terminal: the full loop — sign-in → need → match → offer → deal → review
 pnpm e2e:phase2     # auctions, rentals, lending, messaging, disputes, dashboard, push
+pnpm --filter @dorkar/web dev   # web app: http://localhost:5173 (proxies /api to the gateway)
 ```
 
 `dev:setup` uses `DATABASE_URL` (admin connection, default `postgres://localhost:5432/dorkar`) and
@@ -53,6 +55,12 @@ and push notifications to `var/dev-push.log`.
 
 Bootstrap the first admin:
 `pnpm --filter @dorkar/identity-service grant-role 017XXXXXXXX SUPER_ADMIN` (with `.env.dev` values in the environment).
+
+Browser end-to-end tests run against that stack:
+
+```bash
+cd apps/web && E2E_SMS_LOG=../../var/dev-sms.log pnpm e2e
+```
 
 ### With Docker
 
