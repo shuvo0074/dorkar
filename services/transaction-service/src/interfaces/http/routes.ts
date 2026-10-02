@@ -1,4 +1,11 @@
-import { DeliveryModes, NeedModes, PageQuerySchema, TransactionStates } from '@dorkar/contracts';
+import {
+  DeliveryModes,
+  DisputeReasons,
+  NeedModes,
+  PageQuerySchema,
+  TransactionSourceTypes,
+  TransactionStates,
+} from '@dorkar/contracts';
 import {
   decodeCursor,
   Errors,
@@ -49,7 +56,7 @@ const Money = z.object({ amount: z.number().int(), currency: z.literal('BDT') })
 
 const TransactionDto = z.object({
   id: z.uuid(),
-  sourceType: z.enum(['OFFER', 'LISTING']),
+  sourceType: z.enum(TransactionSourceTypes),
   sourceId: z.uuid(),
   listingId: z.uuid().nullable(),
   needId: z.uuid().nullable(),
@@ -63,9 +70,14 @@ const TransactionDto = z.object({
   buyerConfirmedAt: iso.nullable(),
   sellerConfirmedAt: iso.nullable(),
   deliveredAt: iso.nullable(),
+  handedOverAt: iso.nullable(),
+  returnReportedAt: iso.nullable(),
+  returnedAt: iso.nullable(),
   completedAt: iso.nullable(),
   cancelReason: z.string().nullable(),
   disputeReason: z.string().nullable(),
+  disputeCategory: z.enum(DisputeReasons).nullable(),
+  preDisputeState: z.enum(TransactionStates).nullable(),
   createdAt: iso,
   updatedAt: iso,
   version: z.number().int(),
@@ -75,6 +87,14 @@ const PaymentDto = z.object({
   provider: z.string(),
   status: z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']),
   amount: Money,
+  note: z.string().nullable(),
+  updatedAt: iso,
+});
+
+/** RENT/BORROW deposit: cash between the parties, recorded for information only. */
+const DepositDto = z.object({
+  amount: Money,
+  status: z.enum(['HELD', 'RETURNED', 'FORFEITED']),
   note: z.string().nullable(),
   updatedAt: iso,
 });
@@ -105,6 +125,7 @@ const DetailDto = TransactionDto.extend({
   actions: z.array(z.enum(ActionNames)),
   payment: PaymentDto.nullable(),
   delivery: DeliveryDto.nullable(),
+  deposit: DepositDto.nullable(),
   transitions: z.array(TransitionDto),
 });
 type Detail = z.output<typeof DetailDto>;
@@ -125,9 +146,14 @@ const toTransactionDto = (t: Transaction): z.output<typeof TransactionDto> => ({
   buyerConfirmedAt: t.buyerConfirmedAt,
   sellerConfirmedAt: t.sellerConfirmedAt,
   deliveredAt: t.deliveredAt,
+  handedOverAt: t.handedOverAt,
+  returnReportedAt: t.returnReportedAt,
+  returnedAt: t.returnedAt,
   completedAt: t.completedAt,
   cancelReason: t.cancelReason,
   disputeReason: t.disputeReason,
+  disputeCategory: t.disputeCategory,
+  preDisputeState: t.preDisputeState,
   createdAt: t.createdAt,
   updatedAt: t.updatedAt,
   version: t.version,
@@ -157,6 +183,14 @@ const toDetail = (d: TransactionDetail): Detail => ({
         updatedAt: d.delivery.updatedAt,
       }
     : null,
+  deposit: d.deposit
+    ? {
+        amount: { amount: d.deposit.amount, currency: d.deposit.currency },
+        status: d.deposit.status,
+        note: d.deposit.note,
+        updatedAt: d.deposit.updatedAt,
+      }
+    : null,
   transitions: d.transitions.map((t) => ({
     from: t.from,
     to: t.to,
@@ -172,6 +206,10 @@ const IdParams = z.strictObject({ id: z.uuid() });
 const Reason = z.string().trim().min(3).max(500);
 const NoBody = z.strictObject({}).nullish();
 const ReasonBody = z.strictObject({ reason: Reason });
+const DisputeBody = z.strictObject({
+  reason: Reason,
+  category: z.enum(DisputeReasons).default('OTHER'),
+});
 const ArrangeBody = z.strictObject({
   method: z.enum(DeliveryModes),
   scheduledFor: iso.optional(),
@@ -326,17 +364,35 @@ export const transactionRoutes: FastifyPluginAsyncZod<TransactionRouteDeps> = as
     );
 
   command('confirm', 'Confirm the deal (both parties must confirm)', NoBody, () => ({}));
-  command('cancel', 'Cancel before delivery is arranged', ReasonBody, (b) => ({
-    reason: b.reason,
-  }));
+  command(
+    'cancel',
+    'Cancel before delivery is arranged or the item is handed over',
+    ReasonBody,
+    (b) => ({
+      reason: b.reason,
+    }),
+  );
   command('arrange-delivery', 'Record how and when delivery happens', ArrangeBody, (b) => ({
     delivery: { method: b.method, scheduledFor: b.scheduledFor ?? null, notes: b.notes ?? null },
   }));
   command('mark-delivered', 'Seller: the item was handed over', NoBody, () => ({}));
   command('confirm-receipt', 'Buyer: received as agreed; completes the deal', NoBody, () => ({}));
-  command('dispute', 'Raise a dispute within the dispute window', ReasonBody, (b) => ({
-    reason: b.reason,
-  }));
+  // RENT / BORROW: SELLER is the owner/lender, BUYER the renter/borrower.
+  command('hand-over', 'Owner/lender: the item was handed over', NoBody, () => ({}));
+  command('report-return', 'Renter/borrower: I gave the item back', NoBody, () => ({}));
+  command('confirm-return', 'Owner/lender: the item is back', NoBody, () => ({}));
+  command(
+    'complete',
+    'Owner/lender: close the returned deal (no damage claim)',
+    NoBody,
+    () => ({}),
+  );
+  command(
+    'dispute',
+    'Raise a dispute (within the window); the dispute service takes it from there',
+    DisputeBody,
+    (b) => ({ reason: b.reason, category: b.category }),
+  );
 
   // ---- admin
 
@@ -354,23 +410,5 @@ export const transactionRoutes: FastifyPluginAsyncZod<TransactionRouteDeps> = as
     },
     async (req) => listPage(await txns.listAll(listQuery(req.query)), req.query.limit),
   );
-
-  app.post(
-    '/api/v1/admin/transactions/:id/resolve',
-    {
-      preHandler: requirePermission('dispute:resolve'),
-      schema: {
-        tags: ['admin'],
-        summary: 'Resolve a dispute: RELEASE completes, CANCEL cancels (requires Idempotency-Key)',
-        ...secured,
-        params: IdParams,
-        body: z.strictObject({ resolution: z.enum(['RELEASE', 'CANCEL']), note: Reason }),
-        response: { 200: z.object({ data: DetailDto }), ...errors },
-      },
-    },
-    async (req, reply) =>
-      idempotent(req, reply, 'transaction:resolve', 200, () =>
-        txns.resolve(req.params.id, req.body.resolution, req.body.note, req.ctx),
-      ),
-  );
+  // Dispute resolution is applied from dispute.DisputeResolved / DisputeWithdrawn (ADR-0009).
 };

@@ -8,6 +8,7 @@ import type {
 } from '../application/ports';
 import type {
   Delivery,
+  Deposit,
   ListingSnapshot,
   Payment,
   Transaction,
@@ -35,9 +36,14 @@ const toTransaction = (r: TxRow): Transaction => ({
   buyerConfirmedAt: r.buyer_confirmed_at,
   sellerConfirmedAt: r.seller_confirmed_at,
   deliveredAt: r.delivered_at,
+  handedOverAt: r.handed_over_at,
+  returnReportedAt: r.return_reported_at,
+  returnedAt: r.returned_at,
   completedAt: r.completed_at,
   cancelReason: r.cancel_reason,
   disputeReason: r.dispute_reason,
+  disputeCategory: r.dispute_category,
+  preDisputeState: r.pre_dispute_state,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
   version: r.version,
@@ -51,6 +57,17 @@ const toPayment = (r: Selectable<TransactionDB['payments']>): Payment => ({
   amount: Number(r.amount),
   currency: r.currency,
   providerRef: r.provider_ref,
+  note: r.note,
+  createdAt: r.created_at,
+  updatedAt: r.updated_at,
+});
+
+const toDeposit = (r: Selectable<TransactionDB['deposits']>): Deposit => ({
+  id: r.id,
+  transactionId: r.transaction_id,
+  amount: Number(r.amount),
+  currency: r.currency,
+  status: r.status,
   note: r.note,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
@@ -92,8 +109,8 @@ export function pgTransactionStore(db: Executor): TransactionStore {
   };
 
   const dueIds = async (
-    state: 'CREATED' | 'DELIVERED',
-    column: 'created_at' | 'delivered_at',
+    state: 'CREATED' | 'DELIVERED' | 'RETURNED',
+    column: 'created_at' | 'delivered_at' | 'returned_at',
     afterMs: number,
     limit: number,
   ) => {
@@ -138,9 +155,13 @@ export function pgTransactionStore(db: Executor): TransactionStore {
           quantity: t.quantity,
           terms_snapshot: JSON.stringify(t.terms),
         })
-        // Exactly one transaction per accepted offer, even under concurrent redelivery.
+        // Exactly one transaction per offer/auction/booking/loan, even under concurrent
+        // redelivery. The predicate matches the partial unique index (LISTING is not unique).
         .onConflict((oc) =>
-          oc.columns(['source_type', 'source_id']).where('source_type', '=', 'OFFER').doNothing(),
+          oc
+            .columns(['source_type', 'source_id'])
+            .where(sql<boolean>`source_type <> 'LISTING'`)
+            .doNothing(),
         )
         .returningAll()
         .executeTakeFirst();
@@ -156,9 +177,14 @@ export function pgTransactionStore(db: Executor): TransactionStore {
           ...(p.buyerConfirmedAt ? { buyer_confirmed_at: now } : {}),
           ...(p.sellerConfirmedAt ? { seller_confirmed_at: now } : {}),
           ...(p.deliveredAt ? { delivered_at: now } : {}),
+          ...(p.handedOverAt ? { handed_over_at: now } : {}),
+          ...(p.returnReportedAt ? { return_reported_at: now } : {}),
+          ...(p.returnedAt ? { returned_at: now } : {}),
           ...(p.completedAt ? { completed_at: now } : {}),
           ...(p.cancelReason !== undefined ? { cancel_reason: p.cancelReason } : {}),
           ...(p.disputeReason !== undefined ? { dispute_reason: p.disputeReason } : {}),
+          ...(p.disputeCategory !== undefined ? { dispute_category: p.disputeCategory } : {}),
+          ...(p.preDisputeState !== undefined ? { pre_dispute_state: p.preDisputeState } : {}),
           updated_at: now,
           version: eb('version', '+', 1),
         }))
@@ -281,6 +307,39 @@ export function pgTransactionStore(db: Executor): TransactionStore {
         .execute();
     },
 
+    async deposit(transactionId) {
+      const r = await db
+        .selectFrom('deposits')
+        .selectAll()
+        .where('transaction_id', '=', transactionId)
+        .executeTakeFirst();
+      return r ? toDeposit(r) : null;
+    },
+
+    async insertDeposit(tx, amount) {
+      const r = await db
+        .insertInto('deposits')
+        .values({
+          id: uuidv7(),
+          transaction_id: tx.id,
+          amount,
+          currency: tx.currency,
+          status: 'HELD',
+          note: null,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+      return toDeposit(r);
+    },
+
+    async updateDeposit(depositId, status, note) {
+      await db
+        .updateTable('deposits')
+        .set({ status, note, updated_at: sql<Date>`now()` })
+        .where('id', '=', depositId)
+        .execute();
+    },
+
     async listForParty(accountId, role, q) {
       let query = page(q);
       if (role === 'buyer') query = query.where('buyer_id', '=', accountId);
@@ -297,7 +356,11 @@ export function pgTransactionStore(db: Executor): TransactionStore {
     },
 
     dueForExpiry: (ttlMs, limit) => dueIds('CREATED', 'created_at', ttlMs, limit),
-    dueForAutoComplete: (windowMs, limit) => dueIds('DELIVERED', 'delivered_at', windowMs, limit),
+    async dueForAutoComplete({ deliveredMs, returnedMs }, limit) {
+      const delivered = await dueIds('DELIVERED', 'delivered_at', deliveredMs, limit);
+      const returned = await dueIds('RETURNED', 'returned_at', returnedMs, limit);
+      return [...delivered, ...returned];
+    },
 
     async listing(listingId) {
       const r = await db

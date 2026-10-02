@@ -12,6 +12,7 @@ import type {
  */
 export class CashPaymentProvider implements PaymentProvider {
   readonly name = 'CASH' as const;
+  readonly supportsRefund = false;
 
   async initiate() {
     return { status: 'PENDING' as const, providerRef: null };

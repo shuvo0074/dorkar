@@ -90,6 +90,8 @@ describe('MVP providers', () => {
     expect(refund.status).toBe('PENDING');
     expect(refund.note).toMatch(/not refunded/);
     expect(await cash.status(null, payment)).toBe('PENDING');
+    // A dispute REFUND is never applied to cash: Dorkar never collected the money.
+    expect(cash.supportsRefund).toBe(false);
   });
 
   it('self-arranged delivery records the outcome only', async () => {

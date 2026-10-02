@@ -8,6 +8,8 @@ import type {
 import type {
   Delivery,
   DeliveryProviderName,
+  Deposit,
+  DepositStatus,
   DeliveryStatus,
   ListingSnapshot,
   Payment,
@@ -33,6 +35,8 @@ export interface PaymentUpdate {
  */
 export interface PaymentProvider {
   readonly name: PaymentProviderName;
+  /** Whether `refund` actually moves money back (a dispute REFUND is applied only then). */
+  readonly supportsRefund: boolean;
   initiate(tx: Transaction): Promise<PaymentUpdate>;
   onCompleted(tx: Transaction, payment: Payment): Promise<PaymentUpdate>;
   refund(tx: Transaction, payment: Payment): Promise<PaymentUpdate>;
@@ -76,9 +80,14 @@ export type NewTransaction = Omit<
   | 'buyerConfirmedAt'
   | 'sellerConfirmedAt'
   | 'deliveredAt'
+  | 'handedOverAt'
+  | 'returnReportedAt'
+  | 'returnedAt'
   | 'completedAt'
   | 'cancelReason'
   | 'disputeReason'
+  | 'disputeCategory'
+  | 'preDisputeState'
   | 'createdAt'
   | 'updatedAt'
   | 'version'
@@ -109,7 +118,10 @@ export interface Loaded {
 /** Everything the use cases need from storage, bound to one executor (autocommit or a transaction). */
 export interface TransactionStore {
   load(id: string): Promise<Loaded | null>;
-  /** Inserts; returns null when an OFFER-sourced transaction for the same offer already exists. */
+  /**
+   * Inserts; returns null when a transaction for the same source already exists (every source
+   * type except LISTING is unique per source id).
+   */
   insert(tx: NewTransaction): Promise<Transaction | null>;
   /** Guarded `UPDATE … WHERE state = from AND version = v`; null when someone else won. */
   transition(
@@ -138,6 +150,10 @@ export interface TransactionStore {
   ): Promise<Delivery>;
   updateDelivery(deliveryId: string, update: DeliveryUpdate): Promise<void>;
 
+  deposit(transactionId: string): Promise<Deposit | null>;
+  insertDeposit(tx: Transaction, amount: number): Promise<Deposit>;
+  updateDeposit(depositId: string, status: DepositStatus, note: string | null): Promise<void>;
+
   listForParty(
     accountId: string,
     role: 'buyer' | 'seller' | undefined,
@@ -146,8 +162,14 @@ export interface TransactionStore {
   listAll(q: ListQuery): Promise<Transaction[]>;
   /** Ids of CREATED transactions past the confirmation TTL (rows locked, skip locked). */
   dueForExpiry(confirmTtlMs: number, limit: number): Promise<string[]>;
-  /** Ids of DELIVERED transactions past the completion window (rows locked, skip locked). */
-  dueForAutoComplete(autoCompleteMs: number, limit: number): Promise<string[]>;
+  /**
+   * Ids of DELIVERED transactions past the completion window and RETURNED ones past the return
+   * window (rows locked, skip locked).
+   */
+  dueForAutoComplete(
+    windows: { deliveredMs: number; returnedMs: number },
+    limit: number,
+  ): Promise<string[]>;
 
   listing(listingId: string): Promise<ListingSnapshot | null>;
   /** Guarded decrement of the projected stock; false when not enough is left. */

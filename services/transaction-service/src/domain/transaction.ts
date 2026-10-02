@@ -1,14 +1,26 @@
 import {
   findContactInfo,
   MoneySchema,
+  TransactionSourceTypes,
   type DeliveryMode,
+  type DisputeReason,
   type NeedMode,
   type TransactionState,
 } from '@dorkar/contracts';
 import { AppError } from '@dorkar/kernel';
 
-export const SourceTypes = ['OFFER', 'LISTING'] as const;
+/** What a deal was created from; (sourceType, sourceId) is unique for every type except LISTING. */
+export const SourceTypes = TransactionSourceTypes;
 export type SourceType = (typeof SourceTypes)[number];
+
+/** Sources where both parties already agreed elsewhere: the deal starts CONFIRMED. */
+export const PRE_AGREED_SOURCES: readonly SourceType[] = ['BOOKING', 'LOAN'];
+
+/** Modes whose deals are delivered (BUY/HIRE/SOURCE) vs. handed over and returned (RENT/BORROW). */
+export const DELIVERY_MODES = ['BUY', 'HIRE', 'SOURCE'] as const satisfies readonly NeedMode[];
+export const RETURN_MODES = ['RENT', 'BORROW'] as const satisfies readonly NeedMode[];
+export const usesReturnFlow = (mode: NeedMode): boolean =>
+  (RETURN_MODES as readonly NeedMode[]).includes(mode);
 
 export const PaymentStatuses = ['PENDING', 'PAID', 'REFUNDED', 'FAILED'] as const;
 export type PaymentStatus = (typeof PaymentStatuses)[number];
@@ -27,6 +39,13 @@ export type ListingKind = (typeof ListingKinds)[number];
 export const PriceUnits = ['TOTAL', 'PER_UNIT', 'PER_HOUR', 'PER_DAY'] as const;
 export type PriceUnit = (typeof PriceUnits)[number];
 
+/**
+ * Rental/loan deposits. Cash between the parties: Dorkar records what was agreed and what became
+ * of it, but never holds the money.
+ */
+export const DepositStatuses = ['HELD', 'RETURNED', 'FORFEITED'] as const;
+export type DepositStatus = (typeof DepositStatuses)[number];
+
 export interface Transaction {
   id: string;
   sourceType: SourceType;
@@ -44,9 +63,15 @@ export interface Transaction {
   buyerConfirmedAt: Date | null;
   sellerConfirmedAt: Date | null;
   deliveredAt: Date | null;
+  handedOverAt: Date | null;
+  returnReportedAt: Date | null;
+  returnedAt: Date | null;
   completedAt: Date | null;
   cancelReason: string | null;
   disputeReason: string | null;
+  disputeCategory: DisputeReason | null;
+  /** State before the last dispute; restored when the dispute is withdrawn. */
+  preDisputeState: TransactionState | null;
   createdAt: Date;
   updatedAt: Date;
   version: number;
@@ -60,6 +85,17 @@ export interface Payment {
   amount: number;
   currency: 'BDT';
   providerRef: string | null;
+  note: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface Deposit {
+  id: string;
+  transactionId: string;
+  amount: number;
+  currency: 'BDT';
+  status: DepositStatus;
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -108,17 +144,46 @@ export interface TransactionPolicy {
   confirmTtlMs: number;
   autoCompleteMs: number;
   disputeWindowMs: number;
+  /** RENT/BORROW: after RETURNED, the owner's damage-claim window; then it auto-completes. */
+  returnCompleteMs: number;
 }
 
 export const policyFrom = (s: {
   confirmTtlHours: number;
   autoCompleteDays: number;
   disputeWindowDays: number;
+  returnCompleteHours: number;
 }): TransactionPolicy => ({
   confirmTtlMs: s.confirmTtlHours * 3_600_000,
   autoCompleteMs: s.autoCompleteDays * 86_400_000,
   disputeWindowMs: s.disputeWindowDays * 86_400_000,
+  returnCompleteMs: s.returnCompleteHours * 3_600_000,
 });
+
+/**
+ * What happens to a HELD deposit when a deal ends. Completion returns it, unless the deal was
+ * completed by a dispute resolution in favour of the owner/lender who opened it (damage or
+ * not-returned claim), in which case they keep it. Cancellation, expiry and refunds return it.
+ * Returns null while the deal is still running.
+ */
+export function depositOutcome(
+  to: TransactionState,
+  command: string,
+  disputeOpenedBy: 'BUYER' | 'SELLER' | null,
+): { status: Exclude<DepositStatus, 'HELD'>; note: string } | null {
+  if (to === 'COMPLETED') {
+    return command === 'resolve-release' && disputeOpenedBy === 'SELLER'
+      ? {
+          status: 'FORFEITED',
+          note: 'Kept by the owner: the dispute was resolved in their favour.',
+        }
+      : { status: 'RETURNED', note: 'Returned to the renter/borrower when the deal completed.' };
+  }
+  if (to === 'CANCELLED' || to === 'EXPIRED' || to === 'REFUNDED') {
+    return { status: 'RETURNED', note: 'Returned: the deal did not go ahead.' };
+  }
+  return null;
+}
 
 const MODE_BY_KIND: Record<ListingKind, NeedMode> = {
   PRODUCT: 'BUY',

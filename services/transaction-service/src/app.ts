@@ -1,4 +1,11 @@
-import { CatalogEvents, OfferEvents } from '@dorkar/contracts';
+import {
+  BiddingEvents,
+  CatalogEvents,
+  DisputeEvents,
+  LendingEvents,
+  OfferEvents,
+  RentalEvents,
+} from '@dorkar/contracts';
 import {
   createServiceRuntime,
   loadConfig,
@@ -29,6 +36,8 @@ export const transactionEnvSchema = serviceEnvSchema.extend({
   TRANSACTION_CONFIRM_TTL_HOURS: z.coerce.number().positive().default(48),
   TRANSACTION_AUTO_COMPLETE_DAYS: z.coerce.number().positive().default(3),
   TRANSACTION_DISPUTE_WINDOW_DAYS: z.coerce.number().positive().default(3),
+  /** RENT/BORROW: owner's damage-claim window after the return, then auto-completion. */
+  TRANSACTION_RETURN_COMPLETE_HOURS: z.coerce.number().positive().default(24),
 });
 
 type Job = (trx: Transaction<TransactionDB>) => Promise<number>;
@@ -50,7 +59,9 @@ export async function buildTransactionService(
     producer: 'transaction',
     openapi: {
       title: 'Dorkar Transaction API',
-      description: 'Agreed deals: confirmation, delivery, completion, disputes.',
+      description:
+        'Agreed deals from offers, listings, auctions, bookings and loans: confirmation, ' +
+        'delivery or hand-over and return, completion, disputes.',
     },
     idempotency: true,
     ...(overrides.verifier ? { verifier: overrides.verifier } : {}),
@@ -66,12 +77,31 @@ export async function buildTransactionService(
       confirmTtlHours: config.TRANSACTION_CONFIRM_TTL_HOURS,
       autoCompleteDays: config.TRANSACTION_AUTO_COMPLETE_DAYS,
       disputeWindowDays: config.TRANSACTION_DISPUTE_WINDOW_DAYS,
+      returnCompleteHours: config.TRANSACTION_RETURN_COMPLETE_HOURS,
     }),
+    logger,
   );
 
-  // A deal exists once an offer is accepted (exactly once per offer: inbox + unique source).
+  // Every kind of deal converges here (ADR-0008): exactly once per source (inbox + unique
+  // (source_type, source_id)).
   runtime.on(OfferEvents.OfferAccepted, (p, e, trx) =>
     txns.onOfferAccepted(pgTransactionStore(trx), p, e),
+  );
+  runtime.on(BiddingEvents.AuctionAwarded, (p, e, trx) =>
+    txns.onAuctionAwarded(pgTransactionStore(trx), p, e),
+  );
+  runtime.on(RentalEvents.BookingConfirmed, (p, e, trx) =>
+    txns.onBookingConfirmed(pgTransactionStore(trx), p, e),
+  );
+  runtime.on(LendingEvents.LoanApproved, (p, e, trx) =>
+    txns.onLoanApproved(pgTransactionStore(trx), p, e),
+  );
+  // Dispute outcomes are decided in the dispute service and applied here (ADR-0009).
+  runtime.on(DisputeEvents.DisputeResolved, (p, e, trx) =>
+    txns.onDisputeResolved(pgTransactionStore(trx), p, e),
+  );
+  runtime.on(DisputeEvents.DisputeWithdrawn, (p, e, trx) =>
+    txns.onDisputeWithdrawn(pgTransactionStore(trx), p, e),
   );
   // Listing projection for direct purchases.
   const listing = (p: z.output<typeof CatalogEvents.ListingPublished.schema>) => ({

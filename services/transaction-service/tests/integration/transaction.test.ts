@@ -1,5 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { CatalogEvents, OfferEvents, TransactionEvents, type Role } from '@dorkar/contracts';
+import {
+  BiddingEvents,
+  CatalogEvents,
+  DisputeEvents,
+  LendingEvents,
+  OfferEvents,
+  RentalEvents,
+  TransactionEvents,
+  type Role,
+} from '@dorkar/contracts';
 import { envelope, startTestService, type TestService } from '@dorkar/kernel/testing';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -115,6 +124,12 @@ const outbox = async (txId: string) =>
     .orderBy('id')
     .execute();
 
+/** Every TransactionStateChanged for a transaction, validated against the contract. */
+const stateChanges = async (txId: string) =>
+  (await outbox(txId))
+    .filter((e) => e.type === 'transaction.TransactionStateChanged')
+    .map((e) => TransactionEvents.TransactionStateChanged.schema.parse(e.payload));
+
 const transitionCount = async (txId: string) =>
   (
     await db()
@@ -124,7 +139,11 @@ const transitionCount = async (txId: string) =>
       .executeTakeFirstOrThrow()
   ).n;
 
-const backdate = (txId: string, column: 'created_at' | 'delivered_at', interval: string) =>
+const backdate = (
+  txId: string,
+  column: 'created_at' | 'delivered_at' | 'returned_at',
+  interval: string,
+) =>
   db()
     .updateTable('transactions')
     .set({ [column]: sql<Date>`${sql.ref(column)} - ${interval}::interval` })
@@ -173,8 +192,20 @@ describe('creation from OfferAccepted', () => {
       transactionId: rows[0]!.id,
       sourceType: 'OFFER',
       sourceId: p.offerId,
+      listingId: null,
       amount: { amount: 1_250_000, currency: 'BDT' },
     });
+  });
+
+  it('carries the listing of the accepted offer on TransactionCreated', async () => {
+    const listingId = randomUUID();
+    const p = accepted({ listingId });
+    await t.svc.runtime.deliver(envelope(OfferEvents.OfferAccepted, p));
+    const [row] = await txIdForOffer(p.offerId);
+    const [created] = await outbox(row!.id);
+    expect(TransactionEvents.TransactionCreated.schema.parse(created!.payload).listingId).toBe(
+      listingId,
+    );
   });
 
   it('creates exactly one transaction when the same offer arrives twice concurrently', async () => {
@@ -271,7 +302,9 @@ describe('happy path', () => {
       buyerId: tx.buyer,
       sellerId: tx.seller,
       actorId: tx.seller,
+      mode: 'BUY',
     });
+    expect(changes.every((c) => c.mode === 'BUY' && c.reason === undefined)).toBe(true);
 
     const audits = await db()
       .selectFrom('audit_log')
@@ -463,6 +496,8 @@ describe('cancellation', () => {
       from: 'CONFIRMED',
       to: 'CANCELLED',
       actorId: b.seller,
+      mode: 'BUY',
+      reason: 'Out of stock',
     });
 
     const c = await pending();
@@ -471,6 +506,41 @@ describe('cancellation', () => {
 });
 
 describe('disputes', () => {
+  it('takes a category, rejects unknown ones and contact info in the reason', async () => {
+    const a = await delivered();
+    expect(
+      (await cmd(a.id, 'dispute', a.buyer, { reason: 'Broken screen', category: 'BROKEN' }))
+        .statusCode,
+    ).toBe(400);
+    expect(
+      (await cmd(a.id, 'dispute', a.buyer, { reason: 'Broken screen', extra: true })).statusCode,
+    ).toBe(400);
+    const phone = await cmd(a.id, 'dispute', a.buyer, { reason: 'call me on 01712345678' });
+    expect(phone.statusCode).toBe(422);
+    expect(phone.json().error.details.rule).toBe('NO_CONTACT_INFO');
+    const c = await confirmed();
+    const cancel = await cmd(c.id, 'cancel', c.buyer, { reason: 'mail me at someone@example.com' });
+    expect(cancel.statusCode).toBe(422);
+    expect(cancel.json().error.details.rule).toBe('NO_CONTACT_INFO');
+
+    const ok = await cmd(a.id, 'dispute', a.buyer, {
+      reason: 'Screen is cracked',
+      category: 'NOT_AS_DESCRIBED',
+    });
+    expect(ok.json().data).toMatchObject({
+      state: 'DISPUTED',
+      disputeReason: 'Screen is cracked',
+      disputeCategory: 'NOT_AS_DESCRIBED',
+      preDisputeState: 'DELIVERED',
+    });
+    expect((await stateChanges(a.id)).at(-1)).toMatchObject({
+      to: 'DISPUTED',
+      actorId: a.buyer,
+      reason: 'Screen is cracked',
+      disputeReason: 'NOT_AS_DESCRIBED',
+    });
+  });
+
   it('opens a dispute while delivery is pending or within the window after delivery', async () => {
     const a = await pending();
     expect(
@@ -478,6 +548,16 @@ describe('disputes', () => {
     ).toMatchObject({
       state: 'DISPUTED',
       disputeReason: 'Buyer not reachable',
+      disputeCategory: 'OTHER',
+      preDisputeState: 'DELIVERY_PENDING',
+    });
+    expect((await stateChanges(a.id)).at(-1)).toMatchObject({
+      from: 'DELIVERY_PENDING',
+      to: 'DISPUTED',
+      actorId: a.seller,
+      mode: 'BUY',
+      reason: 'Buyer not reachable',
+      disputeReason: 'OTHER',
     });
 
     const b = await delivered();
@@ -494,56 +574,103 @@ describe('disputes', () => {
   });
 });
 
-describe('admin resolution', () => {
-  const resolve = (id: string, adminId: string, body: unknown, roles: Role[] = ['ADMIN']) =>
-    post(`/api/v1/admin/transactions/${id}/resolve`, adminId, body, { roles });
+describe('dispute resolution via dispute.DisputeResolved', () => {
+  const resolved = (
+    tx: { id: string; buyer: string; seller: string },
+    resolution: 'RELEASE' | 'CANCEL' | 'REFUND',
+    over: Partial<Record<string, unknown>> = {},
+  ) =>
+    envelope(DisputeEvents.DisputeResolved, {
+      disputeId: randomUUID(),
+      transactionId: tx.id,
+      buyerId: tx.buyer,
+      sellerId: tx.seller,
+      resolution,
+      resolvedBy: randomUUID(),
+      note: 'Photos match the item',
+      ...over,
+    });
 
-  it('needs the admin permission', async () => {
+  it('no longer exposes an admin resolve endpoint', async () => {
     const tx = await disputed();
-    expect(
-      (await resolve(tx.id, tx.buyer, { resolution: 'RELEASE', note: 'release it' }, ['MEMBER']))
-        .statusCode,
-    ).toBe(403);
-    expect(
-      (
-        await resolve(tx.id, randomUUID(), { resolution: 'RELEASE', note: 'release it' }, [
-          'SUPPORT',
-        ])
-      ).statusCode,
-    ).toBe(403);
+    const r = await post(
+      `/api/v1/admin/transactions/${tx.id}/resolve`,
+      randomUUID(),
+      { resolution: 'RELEASE', note: 'release it' },
+      { roles: ['ADMIN'] },
+    );
+    expect(r.statusCode).toBe(404);
+    // Admins see no actions: outcomes come from the dispute service.
+    expect((await get(tx.id, randomUUID(), ['ADMIN'])).json().data.actions).toEqual([]);
   });
 
-  it('RELEASE completes and marks cash paid; CANCEL cancels', async () => {
-    const admin = randomUUID();
+  it('RELEASE completes and marks cash paid, exactly once', async () => {
     const a = await disputed();
-    const view = await get(a.id, admin, ['ADMIN']);
-    expect(view.json().data.actions).toEqual(['resolve']);
-    const released = await resolve(a.id, admin, {
-      resolution: 'RELEASE',
-      note: 'Photos match the item',
-    });
-    expect(released.statusCode).toBe(200);
-    expect(released.json().data).toMatchObject({ state: 'COMPLETED', payment: { status: 'PAID' } });
-    const last = released.json().data.transitions.at(-1);
-    expect(last).toMatchObject({ command: 'resolve-release', actorRole: 'ADMIN', actorId: admin });
+    const e = resolved(a, 'RELEASE');
+    expect(await t.svc.runtime.deliver(e)).toBe(true);
+    expect(await t.svc.runtime.deliver(e)).toBe(false); // inbox
 
-    const b = await disputed();
-    const cancelled = await resolve(b.id, admin, {
-      resolution: 'CANCEL',
-      note: 'Seller misdescribed',
+    const d = (await get(a.id, a.buyer)).json().data;
+    expect(d).toMatchObject({ state: 'COMPLETED', payment: { status: 'PAID' }, actions: [] });
+    expect(d.completedAt).toEqual(expect.any(String));
+    expect(d.transitions.at(-1)).toMatchObject({
+      command: 'resolve-release',
+      actorRole: 'ADMIN',
+      actorId: e.payload.resolvedBy,
+      reason: 'Photos match the item',
     });
-    expect(cancelled.json().data).toMatchObject({
+    expect((await stateChanges(a.id)).at(-1)).toMatchObject({
+      from: 'DISPUTED',
+      to: 'COMPLETED',
+      actorId: e.payload.resolvedBy,
+      mode: 'BUY',
+      reason: 'Photos match the item',
+    });
+    const audit = await db()
+      .selectFrom('audit_log')
+      .select(['action', 'actor_type'])
+      .where('target_id', '=', a.id)
+      .where('action', '=', 'transaction.resolve-release')
+      .executeTakeFirstOrThrow();
+    expect(audit.actor_type).toBe('ADMIN');
+  });
+
+  it('CANCEL cancels with the note as the reason', async () => {
+    const b = await disputed();
+    await t.svc.runtime.deliver(resolved(b, 'CANCEL', { note: 'Seller misdescribed' }));
+    expect((await get(b.id, b.buyer)).json().data).toMatchObject({
       state: 'CANCELLED',
       cancelReason: 'Seller misdescribed',
     });
+  });
 
-    const c = await pending();
-    expect(
-      (await resolve(c.id, admin, { resolution: 'RELEASE', note: 'no dispute' })).statusCode,
-    ).toBe(409);
-    expect(
-      (await resolve(randomUUID(), admin, { resolution: 'RELEASE', note: 'nothing' })).statusCode,
-    ).toBe(404);
+  it('ignores REFUND for cash payments, with an audit entry', async () => {
+    const c = await disputed();
+    const before = await transitionCount(c.id);
+    expect(await t.svc.runtime.deliver(resolved(c, 'REFUND'))).toBe(true);
+    expect((await get(c.id, c.buyer)).json().data.state).toBe('DISPUTED');
+    expect(await transitionCount(c.id)).toBe(before);
+    const audits = await db()
+      .selectFrom('audit_log')
+      .select('action')
+      .where('target_id', '=', c.id)
+      .execute();
+    expect(audits.map((x) => x.action)).toContain('transaction.dispute-refund-ignored');
+  });
+
+  it('is a no-op unless the transaction is currently DISPUTED (and its parties match)', async () => {
+    const p = await pending();
+    const before = await transitionCount(p.id);
+    expect(await t.svc.runtime.deliver(resolved(p, 'RELEASE'))).toBe(true);
+    expect((await get(p.id, p.buyer)).json().data.state).toBe('DELIVERY_PENDING');
+    expect(await transitionCount(p.id)).toBe(before);
+
+    const unknown = { id: randomUUID(), buyer: randomUUID(), seller: randomUUID() };
+    expect(await t.svc.runtime.deliver(resolved(unknown, 'CANCEL'))).toBe(true);
+
+    const d = await disputed();
+    await t.svc.runtime.deliver(resolved({ ...d, buyer: randomUUID() }, 'CANCEL'));
+    expect((await get(d.id, d.buyer)).json().data.state).toBe('DISPUTED');
   });
 
   it('lists disputed transactions for staff only', async () => {
@@ -555,6 +682,61 @@ describe('admin resolution', () => {
     const ids = res.json().data.map((x: { id: string; state: string }) => x.id);
     expect(ids).toContain(tx.id);
     expect(res.json().data.every((x: { state: string }) => x.state === 'DISPUTED')).toBe(true);
+  });
+});
+
+describe('dispute withdrawal via dispute.DisputeWithdrawn', () => {
+  const withdrawn = (
+    tx: { id: string; buyer: string; seller: string },
+    previousState: string,
+    withdrawnBy: string,
+  ) =>
+    envelope(DisputeEvents.DisputeWithdrawn, {
+      disputeId: randomUUID(),
+      transactionId: tx.id,
+      buyerId: tx.buyer,
+      sellerId: tx.seller,
+      withdrawnBy,
+      previousState: previousState as 'DELIVERED',
+    });
+
+  it('restores the pre-dispute state (DELIVERED, DELIVERY_PENDING)', async () => {
+    const a = await disputed();
+    expect((await get(a.id, a.buyer)).json().data.preDisputeState).toBe('DELIVERED');
+    await t.svc.runtime.deliver(withdrawn(a, 'DELIVERED', a.buyer));
+    const d = (await get(a.id, a.buyer)).json().data;
+    expect(d).toMatchObject({ state: 'DELIVERED', actions: ['confirm-receipt', 'dispute'] });
+    expect(d.transitions.at(-1)).toMatchObject({
+      command: 'withdraw-dispute',
+      from: 'DISPUTED',
+      to: 'DELIVERED',
+      actorRole: 'SYSTEM',
+      actorId: a.buyer,
+    });
+    expect((await stateChanges(a.id)).at(-1)).toMatchObject({
+      from: 'DISPUTED',
+      to: 'DELIVERED',
+      actorId: a.buyer,
+      mode: 'BUY',
+    });
+
+    const b = await pending();
+    await cmd(b.id, 'dispute', b.seller, { reason: 'Buyer not reachable', category: 'NO_SHOW' });
+    await t.svc.runtime.deliver(withdrawn(b, 'DELIVERY_PENDING', b.seller));
+    expect((await get(b.id, b.buyer)).json().data.state).toBe('DELIVERY_PENDING');
+  });
+
+  it('uses the stored state even when the event reports another one', async () => {
+    const a = await disputed();
+    await t.svc.runtime.deliver(withdrawn(a, 'CONFIRMED', a.buyer));
+    expect((await get(a.id, a.buyer)).json().data.state).toBe('DELIVERED');
+  });
+
+  it('is a no-op when the transaction is not disputed', async () => {
+    const a = await delivered();
+    const before = await transitionCount(a.id);
+    expect(await t.svc.runtime.deliver(withdrawn(a, 'DELIVERED', a.buyer))).toBe(true);
+    expect(await transitionCount(a.id)).toBe(before);
   });
 });
 
@@ -794,5 +976,544 @@ describe('history', () => {
     await expect(
       db().deleteFrom('transaction_transitions').where('transaction_id', '=', tx.id).execute(),
     ).rejects.toThrow(/append-only/);
+  });
+});
+
+// ---------------------------------------------------------------- Phase 2 sources (ADR-0008)
+
+const awarded = (over: Partial<Record<string, unknown>> = {}) => ({
+  auctionId: randomUUID(),
+  winningBidId: randomUUID(),
+  kind: 'FORWARD' as const,
+  needId: null,
+  listingId: randomUUID(),
+  buyerId: randomUUID(),
+  sellerId: randomUUID(),
+  mode: 'BUY' as const,
+  amount: { amount: 4_200_000, currency: 'BDT' as const },
+  quantity: 1,
+  terms: { delivery: 'BUYER_PICKUP' },
+  ...over,
+});
+
+const booking = (over: Partial<Record<string, unknown>> = {}) => ({
+  bookingId: randomUUID(),
+  listingId: randomUUID(),
+  ownerId: randomUUID(),
+  renterId: randomUUID(),
+  startAt: '2026-11-01T09:00:00.000Z',
+  endAt: '2026-11-04T09:00:00.000Z',
+  amount: { amount: 900_000, currency: 'BDT' as const },
+  deposit: { amount: 500_000, currency: 'BDT' as const },
+  terms: { pickup: 'Owner shop' },
+  ...over,
+});
+
+const loan = (over: Partial<Record<string, unknown>> = {}) => ({
+  loanId: randomUUID(),
+  itemId: randomUUID(),
+  lenderId: randomUUID(),
+  borrowerId: randomUUID(),
+  startAt: '2026-11-01T09:00:00.000Z',
+  returnBy: '2026-11-08T09:00:00.000Z',
+  deposit: null,
+  terms: { care: 'Keep dry' },
+  ...over,
+});
+
+const txFor = async (sourceType: string, sourceId: string) =>
+  db()
+    .selectFrom('transactions')
+    .select('id')
+    .where('source_type', '=', sourceType as 'OFFER')
+    .where('source_id', '=', sourceId)
+    .execute();
+
+/** All outbox events of a transaction, each validated against its contract. */
+const contractEvents = async (txId: string) =>
+  (await outbox(txId)).map((e) => {
+    if (e.type === 'transaction.TransactionCreated')
+      return { type: e.type, p: TransactionEvents.TransactionCreated.schema.parse(e.payload) };
+    if (e.type === 'transaction.TransactionStateChanged')
+      return { type: e.type, p: TransactionEvents.TransactionStateChanged.schema.parse(e.payload) };
+    throw new Error(`unexpected event ${e.type}`);
+  });
+
+async function rented(over: Partial<Record<string, unknown>> = {}) {
+  const p = booking(over);
+  await t.svc.runtime.deliver(envelope(RentalEvents.BookingConfirmed, p));
+  const [row] = await txFor('BOOKING', p.bookingId);
+  return { id: row!.id, buyer: p.renterId, seller: p.ownerId, p };
+}
+
+async function lent(over: Partial<Record<string, unknown>> = {}) {
+  const p = loan(over);
+  await t.svc.runtime.deliver(envelope(LendingEvents.LoanApproved, p));
+  const [row] = await txFor('LOAN', p.loanId);
+  return { id: row!.id, buyer: p.borrowerId, seller: p.lenderId, p };
+}
+
+type Party = { id: string; buyer: string; seller: string };
+
+async function handedOver(make: () => Promise<Party> = rented) {
+  const tx = await make();
+  expect((await cmd(tx.id, 'hand-over', tx.seller)).statusCode).toBe(200);
+  return tx;
+}
+
+async function returned(make: () => Promise<Party> = rented) {
+  const tx = await handedOver(make);
+  expect((await cmd(tx.id, 'confirm-return', tx.seller)).statusCode).toBe(200);
+  return tx;
+}
+
+describe('creation from bidding.AuctionAwarded', () => {
+  it('creates one CREATED AUCTION transaction needing both confirmations', async () => {
+    const p = awarded();
+    const e = envelope(BiddingEvents.AuctionAwarded, p);
+    expect(await t.svc.runtime.deliver(e)).toBe(true);
+    expect(await t.svc.runtime.deliver(e)).toBe(false);
+    // A redelivery under a new envelope id still creates nothing (unique source).
+    expect(await t.svc.runtime.deliver(envelope(BiddingEvents.AuctionAwarded, p))).toBe(true);
+    const rows = await txFor('AUCTION', p.auctionId);
+    expect(rows).toHaveLength(1);
+    const id = rows[0]!.id;
+
+    expect((await get(id, p.buyerId)).json().data).toMatchObject({
+      sourceType: 'AUCTION',
+      sourceId: p.auctionId,
+      listingId: p.listingId,
+      needId: null,
+      buyerId: p.buyerId,
+      sellerId: p.sellerId,
+      mode: 'BUY',
+      amount: { amount: 4_200_000 },
+      quantity: 1,
+      terms: { delivery: 'BUYER_PICKUP', auctionKind: 'FORWARD', winningBidId: p.winningBidId },
+      state: 'CREATED',
+      actions: ['confirm', 'cancel'],
+      payment: { provider: 'CASH', status: 'PENDING' },
+      deposit: null,
+      transitions: [],
+    });
+    const events = await contractEvents(id);
+    expect(events).toHaveLength(1);
+    expect(events[0]!.p).toMatchObject({
+      sourceType: 'AUCTION',
+      sourceId: p.auctionId,
+      listingId: p.listingId,
+    });
+
+    await cmd(id, 'confirm', p.buyerId);
+    expect((await cmd(id, 'confirm', p.sellerId)).json().data.state).toBe('CONFIRMED');
+  });
+
+  it('takes need, mode and quantity from a reverse auction', async () => {
+    const p = awarded({
+      kind: 'REVERSE',
+      needId: randomUUID(),
+      listingId: null,
+      mode: 'SOURCE',
+      quantity: 40,
+    });
+    await t.svc.runtime.deliver(envelope(BiddingEvents.AuctionAwarded, p));
+    const [row] = await txFor('AUCTION', p.auctionId);
+    expect((await get(row!.id, p.sellerId)).json().data).toMatchObject({
+      needId: p.needId,
+      listingId: null,
+      mode: 'SOURCE',
+      quantity: 40,
+    });
+  });
+});
+
+describe('creation from rental.BookingConfirmed', () => {
+  it('starts CONFIRMED with an auto-confirm history row, cash payment and a held deposit', async () => {
+    const p = booking();
+    await t.svc.runtime.deliver(envelope(RentalEvents.BookingConfirmed, p));
+    await t.svc.runtime.deliver(envelope(RentalEvents.BookingConfirmed, p)); // redelivery
+    const rows = await txFor('BOOKING', p.bookingId);
+    expect(rows).toHaveLength(1);
+    const id = rows[0]!.id;
+
+    const d = (await get(id, p.ownerId)).json().data;
+    expect(d).toMatchObject({
+      sourceType: 'BOOKING',
+      sourceId: p.bookingId,
+      listingId: p.listingId,
+      needId: null,
+      buyerId: p.renterId,
+      sellerId: p.ownerId,
+      mode: 'RENT',
+      amount: { amount: 900_000 },
+      quantity: 1,
+      terms: {
+        startAt: p.startAt,
+        endAt: p.endAt,
+        deposit: { amount: 500_000, currency: 'BDT' },
+        terms: { pickup: 'Owner shop' },
+      },
+      state: 'CONFIRMED',
+      viewerRole: 'SELLER',
+      actions: ['cancel', 'hand-over'],
+      payment: { provider: 'CASH', status: 'PENDING', amount: { amount: 900_000 } },
+      deposit: { amount: { amount: 500_000 }, status: 'HELD' },
+    });
+    expect(d.buyerConfirmedAt).toEqual(expect.any(String));
+    expect(d.sellerConfirmedAt).toEqual(expect.any(String));
+    expect(d.transitions).toEqual([
+      expect.objectContaining({
+        from: 'CREATED',
+        to: 'CONFIRMED',
+        command: 'auto-confirm',
+        actorRole: 'SYSTEM',
+        actorId: null,
+      }),
+    ]);
+
+    const events = await contractEvents(id);
+    expect(events.map((e) => e.type)).toEqual([
+      'transaction.TransactionCreated',
+      'transaction.TransactionStateChanged',
+    ]);
+    expect(events[0]!.p).toMatchObject({
+      sourceType: 'BOOKING',
+      listingId: p.listingId,
+      mode: 'RENT',
+    });
+    expect(events[1]!.p).toMatchObject({
+      from: 'CREATED',
+      to: 'CONFIRMED',
+      actorId: null,
+      mode: 'RENT',
+    });
+    expect((await get(id, p.renterId)).json().data.actions).toEqual(['cancel']);
+  });
+
+  it('records no deposit when there is none', async () => {
+    const tx = await rented({ deposit: null });
+    expect((await get(tx.id, tx.buyer)).json().data.deposit).toBeNull();
+  });
+});
+
+describe('creation from lending.LoanApproved', () => {
+  it('starts CONFIRMED, free (no payment record), BORROW', async () => {
+    const p = loan({ deposit: { amount: 200_000, currency: 'BDT' } });
+    const e = envelope(LendingEvents.LoanApproved, p);
+    await t.svc.runtime.deliver(e);
+    await t.svc.runtime.deliver(envelope(LendingEvents.LoanApproved, p));
+    const rows = await txFor('LOAN', p.loanId);
+    expect(rows).toHaveLength(1);
+    const id = rows[0]!.id;
+
+    const d = (await get(id, p.borrowerId)).json().data;
+    expect(d).toMatchObject({
+      sourceType: 'LOAN',
+      sourceId: p.loanId,
+      listingId: null,
+      buyerId: p.borrowerId,
+      sellerId: p.lenderId,
+      mode: 'BORROW',
+      amount: { amount: 0 },
+      quantity: 1,
+      terms: {
+        startAt: p.startAt,
+        returnBy: p.returnBy,
+        itemId: p.itemId,
+        deposit: { amount: 200_000 },
+      },
+      state: 'CONFIRMED',
+      payment: null,
+      deposit: { amount: { amount: 200_000 }, status: 'HELD' },
+    });
+    expect(d.transitions.map((x: { command: string }) => x.command)).toEqual(['auto-confirm']);
+    const events = await contractEvents(id);
+    expect(events.map((x) => x.type)).toEqual([
+      'transaction.TransactionCreated',
+      'transaction.TransactionStateChanged',
+    ]);
+    expect(events[0]!.p).toMatchObject({ amount: { amount: 0 }, mode: 'BORROW', listingId: null });
+  });
+
+  it('ignores a deal whose lender is the borrower', async () => {
+    const me = randomUUID();
+    const p = loan({ lenderId: me, borrowerId: me });
+    expect(await t.svc.runtime.deliver(envelope(LendingEvents.LoanApproved, p))).toBe(true);
+    expect(await txFor('LOAN', p.loanId)).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------- RENT / BORROW sub-flow
+
+describe('hand-over and return', () => {
+  it('rental: hand-over → report-return → confirm-return → complete, deposit returned', async () => {
+    const tx = await rented();
+
+    const h = await cmd(tx.id, 'hand-over', tx.seller);
+    expect(h.statusCode).toBe(200);
+    expect(h.json().data).toMatchObject({
+      state: 'HANDED_OVER',
+      actions: ['confirm-return', 'dispute'],
+    });
+    expect(h.json().data.handedOverAt).toEqual(expect.any(String));
+    expect((await get(tx.id, tx.buyer)).json().data.actions).toEqual(['report-return', 'dispute']);
+
+    const r = await cmd(tx.id, 'report-return', tx.buyer);
+    expect(r.json().data).toMatchObject({ state: 'RETURN_REPORTED', actions: ['dispute'] });
+    expect(r.json().data.returnReportedAt).toEqual(expect.any(String));
+
+    const c = await cmd(tx.id, 'confirm-return', tx.seller);
+    expect(c.json().data).toMatchObject({ state: 'RETURNED', actions: ['complete', 'dispute'] });
+    expect(c.json().data.returnedAt).toEqual(expect.any(String));
+    expect((await get(tx.id, tx.buyer)).json().data.actions).toEqual([]);
+
+    const done = await cmd(tx.id, 'complete', tx.seller);
+    expect(done.json().data).toMatchObject({
+      state: 'COMPLETED',
+      payment: { status: 'PAID' },
+      deposit: { status: 'RETURNED' },
+      actions: [],
+    });
+
+    const changes = await stateChanges(tx.id);
+    expect(changes.map((x) => `${x.from}>${x.to}`)).toEqual([
+      'CREATED>CONFIRMED',
+      'CONFIRMED>HANDED_OVER',
+      'HANDED_OVER>RETURN_REPORTED',
+      'RETURN_REPORTED>RETURNED',
+      'RETURNED>COMPLETED',
+    ]);
+    expect(changes.every((x) => x.mode === 'RENT')).toBe(true);
+    expect(changes[1]!.actorId).toBe(tx.seller);
+    expect(changes[2]!.actorId).toBe(tx.buyer);
+  });
+
+  it('loan: the lender confirms the return directly from HANDED_OVER', async () => {
+    const tx = await handedOver(lent);
+    const c = await cmd(tx.id, 'confirm-return', tx.seller);
+    expect(c.json().data.state).toBe('RETURNED');
+    expect((await cmd(tx.id, 'complete', tx.seller)).json().data).toMatchObject({
+      state: 'COMPLETED',
+      payment: null,
+    });
+    expect((await stateChanges(tx.id)).every((x) => x.mode === 'BORROW')).toBe(true);
+  });
+
+  it('only the right party runs each step', async () => {
+    const tx = await rented();
+    expect((await cmd(tx.id, 'hand-over', tx.buyer)).statusCode).toBe(403);
+    expect((await cmd(tx.id, 'report-return', tx.buyer)).statusCode).toBe(409);
+    await cmd(tx.id, 'hand-over', tx.seller);
+    expect((await cmd(tx.id, 'report-return', tx.seller)).statusCode).toBe(403);
+    expect((await cmd(tx.id, 'confirm-return', tx.buyer)).statusCode).toBe(403);
+    expect((await cmd(tx.id, 'complete', tx.seller)).statusCode).toBe(409);
+    expect((await cmd(tx.id, 'cancel', tx.buyer, { reason: 'Too late now' })).statusCode).toBe(409);
+    expect((await cmd(tx.id, 'hand-over', randomUUID())).statusCode).toBe(404);
+  });
+
+  it('either party cancels a confirmed rental before hand-over; the deposit is returned', async () => {
+    const tx = await rented();
+    const r = await cmd(tx.id, 'cancel', tx.buyer, { reason: 'Plans changed' });
+    expect(r.json().data).toMatchObject({ state: 'CANCELLED', deposit: { status: 'RETURNED' } });
+  });
+
+  it('requires an Idempotency-Key and replays retries', async () => {
+    const tx = await rented();
+    const noKey = await post(`/api/v1/transactions/${tx.id}/hand-over`, tx.seller, undefined, {
+      key: null,
+    });
+    expect(noKey.statusCode).toBe(400);
+    const key = randomUUID();
+    const a = await cmd(tx.id, 'hand-over', tx.seller, undefined, key);
+    const b = await cmd(tx.id, 'hand-over', tx.seller, undefined, key);
+    expect(b.headers['idempotent-replayed']).toBe('true');
+    expect(b.json()).toEqual(a.json());
+    expect(await transitionCount(tx.id)).toBe('2');
+  });
+});
+
+describe('mode guards', () => {
+  it('no hand-over or return steps on a purchase', async () => {
+    const tx = await confirmed();
+    for (const c of ['hand-over', 'complete'] as const) {
+      const r = await cmd(tx.id, c, tx.seller);
+      expect(r.statusCode).toBe(422);
+      expect(r.json().error.details.rule).toBe('NOT_FOR_MODE');
+    }
+    expect((await cmd(tx.id, 'report-return', tx.buyer)).json().error.details.rule).toBe(
+      'NOT_FOR_MODE',
+    );
+    expect((await get(tx.id, tx.seller)).json().data.state).toBe('CONFIRMED');
+  });
+
+  it('no delivery steps on a rental', async () => {
+    const tx = await rented();
+    const a = await cmd(tx.id, 'arrange-delivery', tx.buyer, { method: 'BUYER_PICKUP' });
+    expect(a.statusCode).toBe(422);
+    expect(a.json().error.details.rule).toBe('NOT_FOR_MODE');
+    await cmd(tx.id, 'hand-over', tx.seller);
+    const m = await cmd(tx.id, 'mark-delivered', tx.seller);
+    expect(m.statusCode).toBe(422);
+    expect(m.json().error.details.rule).toBe('NOT_FOR_MODE');
+    expect((await cmd(tx.id, 'confirm-receipt', tx.buyer)).statusCode).toBe(422);
+    expect((await get(tx.id, tx.seller)).json().data.state).toBe('HANDED_OVER');
+  });
+});
+
+describe('rental disputes', () => {
+  it('either party disputes while the item is out or its return is reported', async () => {
+    const a = await handedOver();
+    const r = await cmd(a.id, 'dispute', a.seller, {
+      reason: 'Not back yet',
+      category: 'NOT_RETURNED',
+    });
+    expect(r.json().data).toMatchObject({ state: 'DISPUTED', preDisputeState: 'HANDED_OVER' });
+    expect((await stateChanges(a.id)).at(-1)).toMatchObject({
+      to: 'DISPUTED',
+      mode: 'RENT',
+      disputeReason: 'NOT_RETURNED',
+      reason: 'Not back yet',
+      actorId: a.seller,
+    });
+
+    const b = await handedOver(lent);
+    await cmd(b.id, 'report-return', b.buyer);
+    expect(
+      (await cmd(b.id, 'dispute', b.buyer, { reason: 'Lender ignores me' })).json().data,
+    ).toMatchObject({
+      state: 'DISPUTED',
+      preDisputeState: 'RETURN_REPORTED',
+      disputeCategory: 'OTHER',
+    });
+  });
+
+  it('damage claim: owner only, within the window after the return', async () => {
+    const a = await returned();
+    expect((await cmd(a.id, 'dispute', a.buyer, { reason: 'Owner is rude' })).statusCode).toBe(403);
+    await backdate(a.id, 'returned_at', '23 hours');
+    const claim = await cmd(a.id, 'dispute', a.seller, {
+      reason: 'Lens is scratched',
+      category: 'DAMAGED',
+    });
+    expect(claim.json().data).toMatchObject({
+      state: 'DISPUTED',
+      preDisputeState: 'RETURNED',
+      disputeCategory: 'DAMAGED',
+    });
+
+    const b = await returned();
+    await backdate(b.id, 'returned_at', '25 hours');
+    const late = await cmd(b.id, 'dispute', b.seller, { reason: 'Lens is scratched' });
+    expect(late.statusCode).toBe(422);
+    expect(late.json().error.details.rule).toBe('DAMAGE_CLAIM_WINDOW_CLOSED');
+    expect((await get(b.id, b.seller)).json().data.actions).toEqual(['complete']);
+  });
+
+  it('withdrawal restores RETURNED; resolutions settle the deposit', async () => {
+    const resolve = (
+      tx: { id: string; buyer: string; seller: string },
+      resolution: 'RELEASE' | 'CANCEL',
+    ) =>
+      t.svc.runtime.deliver(
+        envelope(DisputeEvents.DisputeResolved, {
+          disputeId: randomUUID(),
+          transactionId: tx.id,
+          buyerId: tx.buyer,
+          sellerId: tx.seller,
+          resolution,
+          resolvedBy: randomUUID(),
+          note: 'Decided on the evidence',
+        }),
+      );
+    const claim = async () => {
+      const tx = await returned();
+      await cmd(tx.id, 'dispute', tx.seller, { reason: 'Lens is scratched', category: 'DAMAGED' });
+      return tx;
+    };
+
+    const w = await claim();
+    await t.svc.runtime.deliver(
+      envelope(DisputeEvents.DisputeWithdrawn, {
+        disputeId: randomUUID(),
+        transactionId: w.id,
+        buyerId: w.buyer,
+        sellerId: w.seller,
+        withdrawnBy: w.seller,
+        previousState: 'RETURNED',
+      }),
+    );
+    expect((await get(w.id, w.seller)).json().data).toMatchObject({
+      state: 'RETURNED',
+      deposit: { status: 'HELD' },
+    });
+
+    // The owner's claim upheld: the deal completes and the owner keeps the deposit.
+    const upheld = await claim();
+    await resolve(upheld, 'RELEASE');
+    expect((await get(upheld.id, upheld.buyer)).json().data).toMatchObject({
+      state: 'COMPLETED',
+      payment: { status: 'PAID' },
+      deposit: { status: 'FORFEITED' },
+    });
+
+    // The renter's complaint rejected (RELEASE): completed, deposit returned.
+    const complaint = await handedOver();
+    await cmd(complaint.id, 'dispute', complaint.buyer, { reason: 'It broke on day one' });
+    await resolve(complaint, 'RELEASE');
+    expect((await get(complaint.id, complaint.buyer)).json().data).toMatchObject({
+      state: 'COMPLETED',
+      deposit: { status: 'RETURNED' },
+    });
+
+    const cancelled = await claim();
+    await resolve(cancelled, 'CANCEL');
+    expect((await get(cancelled.id, cancelled.buyer)).json().data).toMatchObject({
+      state: 'CANCELLED',
+      deposit: { status: 'RETURNED' },
+    });
+  });
+});
+
+describe('auto-complete of returned rentals and loans', () => {
+  it('completes RETURNED deals past the window, not recent or disputed ones', async () => {
+    const old = await returned();
+    const oldLoan = await returned(lent);
+    const recent = await returned();
+    const contested = await returned();
+    await cmd(contested.id, 'dispute', contested.seller, { reason: 'Lens is scratched' });
+    await backdate(old.id, 'returned_at', '25 hours');
+    await backdate(oldLoan.id, 'returned_at', '25 hours');
+    await backdate(recent.id, 'returned_at', '23 hours');
+    await backdate(contested.id, 'returned_at', '25 hours');
+
+    expect(await runJob('autoComplete')).toBeGreaterThanOrEqual(2);
+
+    const o = (await get(old.id, old.buyer)).json().data;
+    expect(o).toMatchObject({
+      state: 'COMPLETED',
+      payment: { status: 'PAID' },
+      deposit: { status: 'RETURNED' },
+    });
+    expect(o.transitions.at(-1)).toMatchObject({ command: 'auto-complete', actorRole: 'SYSTEM' });
+    expect((await stateChanges(old.id)).at(-1)).toMatchObject({
+      from: 'RETURNED',
+      to: 'COMPLETED',
+      actorId: null,
+      mode: 'RENT',
+    });
+    expect((await get(oldLoan.id, oldLoan.buyer)).json().data.state).toBe('COMPLETED');
+    expect((await get(recent.id, recent.buyer)).json().data.state).toBe('RETURNED');
+    expect((await get(contested.id, contested.buyer)).json().data.state).toBe('DISPUTED');
+  });
+});
+
+describe('event payloads', () => {
+  it('every event of every flow validates against the contracts and carries mode', async () => {
+    const ids = [(await disputed()).id, (await returned()).id, (await returned(lent)).id];
+    for (const id of ids) {
+      const events = await contractEvents(id);
+      expect(events.length).toBeGreaterThan(1);
+      for (const e of events) expect(e.p.mode).toEqual(expect.any(String));
+    }
   });
 });
