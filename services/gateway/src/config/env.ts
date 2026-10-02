@@ -18,8 +18,22 @@ export const gatewayEnvSchema = baseEnvSchema
     SERVICE_NAME: z.string().default('gateway'),
     PORT: z.coerce.number().int().default(4000),
 
-    /** Upstream base URLs, one per service (private network addresses). */
+    /**
+     * Upstream base URLs (private network addresses). Identity is required; every other service
+     * is optional so services can be rolled out one by one — their routes are skipped until set.
+     */
     UPSTREAM_IDENTITY_URL: z.url(),
+    UPSTREAM_PROFILE_URL: z.url().optional(),
+    UPSTREAM_VERIFICATION_URL: z.url().optional(),
+    UPSTREAM_CATALOG_URL: z.url().optional(),
+    UPSTREAM_DEMAND_URL: z.url().optional(),
+    UPSTREAM_MATCHING_URL: z.url().optional(),
+    UPSTREAM_OFFER_URL: z.url().optional(),
+    UPSTREAM_TRANSACTION_URL: z.url().optional(),
+    UPSTREAM_REPUTATION_URL: z.url().optional(),
+    UPSTREAM_MODERATION_URL: z.url().optional(),
+    UPSTREAM_NOTIFICATION_URL: z.url().optional(),
+    UPSTREAM_MEDIA_URL: z.url().optional(),
 
     JWKS_URL: z.url().optional(),
     JWT_ISSUER: z.string().default('dorkar-identity'),

@@ -35,6 +35,8 @@ import { createPgUnitOfWork, purgeExpired } from './infrastructure/pg-unit-of-wo
 import { FileSmsSender } from './infrastructure/sms/sms-senders';
 import { JoseTokenService } from './infrastructure/token-issuer';
 import { identityRoutes } from './interfaces/http/routes';
+import { identityInternalRoutes } from './interfaces/http/internal-routes';
+import { GetContact } from './application/use-cases/contact';
 
 export interface IdentityOverrides {
   sms?: SmsSender;
@@ -150,6 +152,12 @@ export async function buildIdentityService(
     },
     allowedOrigins: config.CORS_ORIGINS,
   });
+  if (config.INTERNAL_API_TOKEN) {
+    await app.register(identityInternalRoutes, {
+      token: config.INTERNAL_API_TOKEN,
+      getContact: new GetContact(deps),
+    });
+  }
 
   const relay = new OutboxRelay(database.db, new RedisStreamPublisher(bus, 'identity'), logger, {
     producer: 'identity',

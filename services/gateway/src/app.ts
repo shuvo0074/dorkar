@@ -67,11 +67,26 @@ export async function buildGateway(
     },
   });
 
-  await registerProxies(app, {
+  const skipped = await registerProxies(app, {
     routes: ROUTE_TABLE,
-    upstreams: { identity: config.UPSTREAM_IDENTITY_URL },
+    upstreams: {
+      identity: config.UPSTREAM_IDENTITY_URL,
+      profile: config.UPSTREAM_PROFILE_URL,
+      verification: config.UPSTREAM_VERIFICATION_URL,
+      catalog: config.UPSTREAM_CATALOG_URL,
+      demand: config.UPSTREAM_DEMAND_URL,
+      matching: config.UPSTREAM_MATCHING_URL,
+      offer: config.UPSTREAM_OFFER_URL,
+      transaction: config.UPSTREAM_TRANSACTION_URL,
+      reputation: config.UPSTREAM_REPUTATION_URL,
+      moderation: config.UPSTREAM_MODERATION_URL,
+      notification: config.UPSTREAM_NOTIFICATION_URL,
+      media: config.UPSTREAM_MEDIA_URL,
+    },
     timeoutMs: config.UPSTREAM_TIMEOUT_MS,
   });
+  if (skipped.length)
+    logger.warn({ skipped }, 'upstreams not configured; their routes are disabled');
 
   // Dedicated, unprefixed connection without command timeout: the consumer issues blocking reads.
   const consumer = new RedisStreamConsumer(

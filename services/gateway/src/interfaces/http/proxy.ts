@@ -1,12 +1,13 @@
 import proxy, { type FastifyHttpProxyOptions } from '@fastify/http-proxy';
 import type { ErrorBody } from '@dorkar/contracts';
 import type { App } from '@dorkar/kernel';
+import type { FastifyReply } from 'fastify';
 import type { IncomingHttpHeaders } from 'node:http';
 import type { RouteRule, Upstream } from '../../route-table';
 
 export interface ProxyOptions {
   routes: readonly RouteRule[];
-  upstreams: Record<Upstream, string>;
+  upstreams: Partial<Record<Upstream, string | undefined>>;
   timeoutMs: number;
 }
 
@@ -60,10 +61,27 @@ function upstreamErrorBody(requestId: string, error: Error): { status: number; b
   return { status: timeout ? 504 : 503, body };
 }
 
-export async function registerProxies(app: App, opts: ProxyOptions): Promise<void> {
+/** Registers a proxy per route whose upstream is configured; returns the skipped upstreams. */
+export async function registerProxies(app: App, opts: ProxyOptions): Promise<Upstream[]> {
+  const skipped = new Set<Upstream>();
   for (const route of opts.routes) {
+    const upstream = opts.upstreams[route.upstream];
+    if (!upstream) {
+      // Claim the paths anyway, so a nested route (e.g. /needs/:id/matches) of an undeployed
+      // service is a clean 404 instead of falling through to its parent's service.
+      skipped.add(route.upstream);
+      const notDeployed = async (req: { id: string }, reply: FastifyReply) => {
+        const body: ErrorBody = {
+          error: { code: 'NOT_FOUND', message: 'Route not found.', requestId: req.id },
+        };
+        return reply.status(404).send(body);
+      };
+      app.all(route.prefix, notDeployed);
+      app.all(`${route.prefix}/*`, notDeployed);
+      continue;
+    }
     const options: FastifyHttpProxyOptions = {
-      upstream: opts.upstreams[route.upstream],
+      upstream,
       prefix: route.prefix,
       rewritePrefix: route.prefix,
       disableRequestLogging: true, // the edge logs one line per request itself
@@ -86,4 +104,5 @@ export async function registerProxies(app: App, opts: ProxyOptions): Promise<voi
     };
     await app.register(proxy, options);
   }
+  return [...skipped];
 }

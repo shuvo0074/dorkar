@@ -59,6 +59,8 @@ export const identityEnvSchema = baseEnvSchema
     REFRESH_COOKIE_SECURE: bool.default(true),
     REFRESH_COOKIE_PATH: z.string().default('/api/v1/auth'),
 
+    /** Enables /internal/v1 routes (e.g. contact lookup for SMS notifications). Min 32 chars. */
+    INTERNAL_API_TOKEN: z.string().min(32).optional(),
     OUTBOX_RELAY_ENABLED: bool.default(true),
     JOBS_ENABLED: bool.default(true),
   })
