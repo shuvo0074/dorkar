@@ -457,7 +457,10 @@ export class TransactionService {
     if (viewerRole) {
       const allowed = new Set<TransactionCommand>(availableCommands(facts, viewerRole));
       actions = PartyCommands.filter((c) => allowed.has(c));
-    } else if (viewer.permissions.has('dispute:resolve') && availableCommands(facts, 'ADMIN').length) {
+    } else if (
+      viewer.permissions.has('dispute:resolve') &&
+      availableCommands(facts, 'ADMIN').length
+    ) {
       actions = ['resolve'];
     }
     return {

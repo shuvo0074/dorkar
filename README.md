@@ -2,36 +2,58 @@
 
 Demand-first marketplace for Bangladesh — _tell us what you need, let the market come to you._
 
-Architecture, decisions and roadmap: [docs/README.md](docs/README.md).
+Architecture, decisions and roadmap: [docs/README.md](docs/README.md). Rules for adding a service:
+[docs/engineering/service-playbook.md](docs/engineering/service-playbook.md).
 
 ## Repository
 
-| Path                        | What                                                                                                                                          |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/contracts`        | Shared types: BD phone normalization, error codes, roles/permissions, event schemas                                                           |
-| `packages/kernel`           | Platform kit: config, logging, errors, HTTP server conventions, DB + migrator, outbox/relay, audit log, rate limiter, jobs, graceful shutdown |
-| `services/identity-service` | Phone + OTP login, sessions, refresh rotation, devices, account status                                                                        |
-| `infra/`                    | Docker Compose, Postgres bootstrap, backup/restore scripts, k6 load tests                                                                     |
+| Path                            | Port | What                                                                                                                     |
+| ------------------------------- | ---- | ------------------------------------------------------------------------------------------------------------------------ |
+| `packages/contracts`            |      | Shared types: BD phone/locations, money, roles/permissions, error codes, event schemas                                   |
+| `packages/kernel`               |      | Platform kit: config, logging, errors, HTTP conventions, DB + migrator, outbox/relay, inbox, idempotency, jobs, test kit |
+| `services/gateway`              | 4000 | Public entry point: edge auth, immediate revocation, routing, rate limits                                                |
+| `services/identity-service`     | 4001 | Phone + OTP login, sessions, refresh rotation, devices, account status, audited contact lookup                           |
+| `services/profile-service`      | 4002 | Profiles, user types, seller capabilities                                                                                |
+| `services/verification-service` | 4003 | Verification records (phone, NID review) and the policy engine                                                           |
+| `services/catalog-service`      | 4004 | Categories, attribute schemas, listings, search                                                                          |
+| `services/demand-service`       | 4005 | Needs and their lifecycle                                                                                                |
+| `services/media-service`        | 4006 | Uploads, signed URLs (local disk or S3)                                                                                  |
+| `services/matching-service`     | 4007 | Rule-based, explainable Need ↔ seller matching                                                                           |
+| `services/offer-service`        | 4008 | Offers, counter-offers, exclusive acceptance                                                                             |
+| `services/transaction-service`  | 4009 | Deals from offers or direct purchase; state machine, cash + self-arranged delivery, disputes                             |
+| `services/reputation-service`   | 4010 | Reviews after completed deals, trust signals                                                                             |
+| `services/moderation-service`   | 4011 | Reports, moderation actions                                                                                              |
+| `services/notification-service` | 4012 | Event-driven in-app notifications and SMS                                                                                |
+| `infra/`                        |      | Docker Compose (generated), Postgres bootstrap, backup/restore scripts, k6 load tests                                    |
 
 ## Local development
 
-Requirements: Node ≥ 24, pnpm 10, and either Docker or local Postgres ≥ 14 + Redis ≥ 7.
+Requirements: Node ≥ 24, pnpm 10, local Postgres ≥ 14 and Redis ≥ 7.
 
 ```bash
 pnpm install
-pnpm infra:up                                   # Postgres :5433, Redis :6380 (Docker)
-cp services/identity-service/.env.example services/identity-service/.env
-pnpm --filter @dorkar/identity-service keys:generate >> services/identity-service/.env
-pnpm --filter @dorkar/identity-service migrate up
-pnpm --filter @dorkar/identity-service dev       # http://localhost:4001/docs
-cp services/gateway/.env.example services/gateway/.env   # then set PII_HASH_KEY
-pnpm --filter @dorkar/gateway dev                # public entry point: http://localhost:4000
+pnpm dev:setup      # once (idempotent): .env.dev secrets, database, per-service schemas/roles, migrations
+pnpm dev:backend    # all 12 services + gateway with labelled logs; public API at http://localhost:4000
+pnpm e2e:backend    # in another terminal: the full loop — sign-in → need → match → offer → deal → review
 ```
 
-In development, OTP SMS messages are appended to `services/identity-service/var/dev-sms.log`
-(never to the application log).
+`dev:setup` uses `DATABASE_URL` (admin connection, default `postgres://localhost:5432/dorkar`) and
+`REDIS_URL` (default `redis://localhost:6379/0`). `pnpm dev:backend profile demand` starts only those
+services plus the gateway. Each service also serves OpenAPI docs at `http://localhost:<port>/docs`.
 
-Bootstrap the first admin: `pnpm --filter @dorkar/identity-service grant-role 017XXXXXXXX SUPER_ADMIN`.
+In development, OTP SMS messages are appended to `var/dev-sms.log` (never to the application log).
+
+Bootstrap the first admin:
+`pnpm --filter @dorkar/identity-service grant-role 017XXXXXXXX SUPER_ADMIN` (with `.env.dev` values in the environment).
+
+### With Docker
+
+```bash
+cp infra/docker/secrets.env.example infra/docker/secrets.env   # fill it in
+docker compose -f infra/docker/compose.yml up --build            # gateway on http://localhost:4000
+```
+
+`infra/docker/compose.yml` is generated from `scripts/backend-services.mjs` by `node scripts/gen-compose.mjs`.
 
 ## Checks
 

@@ -36,10 +36,14 @@ have a presence and matching has supply, but the UX leads with the Need.
 | 1   | Platform kernel, repo tooling, local infra, CI | ✅ done |
 | 2   | Identity service                               | ✅ done |
 | 3   | Gateway                                        | ✅ done |
-| 4   | Profile + Verification                         | next    |
-| 5   | Catalog                                        |         |
-| 6   | Demand + Matching                              |         |
-| 7   | Offer                                          |         |
-| 8   | Transaction                                    |         |
-| 9   | Reputation, Moderation, Notification, Media    |         |
-| 10  | Web app (incrementally from module 3)          |         |
+| 4   | Profile + Verification                         | ✅ done |
+| 5   | Catalog                                        | ✅ done |
+| 6   | Demand + Matching                              | ✅ done |
+| 7   | Offer                                          | ✅ done |
+| 8   | Transaction                                    | ✅ done |
+| 9   | Reputation, Moderation, Notification, Media    | ✅ done |
+| 10  | Web app                                        | next    |
+
+Known MVP follow-ups: S3 media storage and a production SMS provider (both behind ports, untested
+against real vendors); a `MediaDeleted` event; category deactivation cascading to listings;
+`listingId` on `TransactionCreated` so catalog can decrement stock for offer-driven deals.

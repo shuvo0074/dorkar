@@ -56,6 +56,17 @@ jobs:
       matrix:
         include:
           - { service: identity-service, package: '@dorkar/identity-service' }
+          - { service: profile-service, package: '@dorkar/profile-service' }
+          - { service: verification-service, package: '@dorkar/verification-service' }
+          - { service: catalog-service, package: '@dorkar/catalog-service' }
+          - { service: demand-service, package: '@dorkar/demand-service' }
+          - { service: media-service, package: '@dorkar/media-service' }
+          - { service: matching-service, package: '@dorkar/matching-service' }
+          - { service: offer-service, package: '@dorkar/offer-service' }
+          - { service: transaction-service, package: '@dorkar/transaction-service' }
+          - { service: reputation-service, package: '@dorkar/reputation-service' }
+          - { service: moderation-service, package: '@dorkar/moderation-service' }
+          - { service: notification-service, package: '@dorkar/notification-service' }
           - { service: gateway, package: '@dorkar/gateway' }
     permissions:
       contents: read
@@ -90,5 +101,5 @@ jobs:
           exit-code: '1'
           ignore-unfixed: true
 
-  # Deploy jobs (staging → E2E → approval → production, same image digest) are added with the
-  # gateway module, when there is more than one service to deploy. See docs/architecture/07-operations.md §2.
+  # Deploy jobs (staging → E2E → approval → production, same image digest) attach here once a
+  # staging environment exists. See docs/architecture/07-operations.md §2.

@@ -43,11 +43,11 @@ implementation → run tests → security review → performance review → refa
 1. **Platform kernel** + local infra (Postgres, Redis, compose, CI) ✅
 2. **Identity service** (phone + OTP, sessions, devices) ✅
 3. **Gateway** (edge auth, immediate revocation, routing, rate limits) ✅
-4. Profile + Verification (policy engine)
-5. Catalog (categories, attribute schemas, listings, search)
-6. Demand (Needs) + Matching (rule-based)
-7. Offers + negotiation
-8. Transactions (cash, self-arranged delivery)
-9. Reputation (reviews), Moderation (reports), Notifications, Media
-10. Web app (React) — built feature-by-feature alongside 3–9
+4. **Profile + Verification (policy engine)** ✅
+5. **Catalog (categories, attribute schemas, listings, search)** ✅
+6. **Demand (Needs) + Matching (rule-based)** ✅
+7. **Offers + negotiation** ✅
+8. **Transactions (cash, self-arranged delivery)** ✅
+9. **Reputation (reviews), Moderation (reports), Notifications, Media** ✅
+10. Web app (React) — next, against the complete backend (`pnpm e2e:backend` proves the loop)
 11. Phase 2: Bidding, Rental, Lending, Disputes, Messaging
