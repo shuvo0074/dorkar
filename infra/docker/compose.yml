@@ -235,6 +235,96 @@ services:
       SMS_FILE_PATH: /tmp/notification-sms.log
     expose: ['4012']
 
+  bidding:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: bidding-service, PACKAGE: '@dorkar/bidding-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: bidding-service
+      PORT: '4013'
+      DATABASE_URL: postgres://svc_bidding:dev_bidding_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: bidding
+    expose: ['4013']
+
+  rental:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: rental-service, PACKAGE: '@dorkar/rental-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: rental-service
+      PORT: '4014'
+      DATABASE_URL: postgres://svc_rental:dev_rental_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: rental
+    expose: ['4014']
+
+  lending:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: lending-service, PACKAGE: '@dorkar/lending-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: lending-service
+      PORT: '4015'
+      DATABASE_URL: postgres://svc_lending:dev_lending_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: lending
+    expose: ['4015']
+
+  dispute:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: dispute-service, PACKAGE: '@dorkar/dispute-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: dispute-service
+      PORT: '4016'
+      DATABASE_URL: postgres://svc_dispute:dev_dispute_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: dispute
+    expose: ['4016']
+
+  messaging:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: messaging-service, PACKAGE: '@dorkar/messaging-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: messaging-service
+      PORT: '4017'
+      DATABASE_URL: postgres://svc_messaging:dev_messaging_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: messaging
+    expose: ['4017']
+
+  dashboard:
+    <<: *node
+    build:
+      context: ../..
+      dockerfile: infra/docker/service.Dockerfile
+      args: { SERVICE: dashboard-service, PACKAGE: '@dorkar/dashboard-service' }
+    command: ['sh', '-c', 'node dist/migrate.js up && exec node --enable-source-maps dist/main.js']
+    environment:
+      <<: *env
+      SERVICE_NAME: dashboard-service
+      PORT: '4018'
+      DATABASE_URL: postgres://svc_dashboard:dev_dashboard_pw@postgres:5432/dorkar
+      DATABASE_SCHEMA: dashboard
+    expose: ['4018']
+
   gateway:
     <<: *node
     build:
@@ -261,6 +351,12 @@ services:
       UPSTREAM_REPUTATION_URL: http://reputation:4010
       UPSTREAM_MODERATION_URL: http://moderation:4011
       UPSTREAM_NOTIFICATION_URL: http://notification:4012
+      UPSTREAM_BIDDING_URL: http://bidding:4013
+      UPSTREAM_RENTAL_URL: http://rental:4014
+      UPSTREAM_LENDING_URL: http://lending:4015
+      UPSTREAM_DISPUTE_URL: http://dispute:4016
+      UPSTREAM_MESSAGING_URL: http://messaging:4017
+      UPSTREAM_DASHBOARD_URL: http://dashboard:4018
     ports: ['127.0.0.1:4000:4000']
 
 volumes:

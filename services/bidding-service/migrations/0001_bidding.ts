@@ -63,7 +63,7 @@ export const m0001Bidding: Migration = {
         reserve_price_amount bigint check (reserve_price_amount >= 0),
         min_increment_amount bigint not null check (min_increment_amount > 0),
         starts_at timestamptz not null,
-        ends_at timestamptz not null,
+        ends_at timestamptz(3) not null,
         anti_snipe_seconds int not null check (anti_snipe_seconds between 0 and 600),
         status text not null check (status in ${AUCTION_STATUSES}),
         leading_bid_id uuid,

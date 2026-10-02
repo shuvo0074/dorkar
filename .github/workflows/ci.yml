@@ -67,6 +67,12 @@ jobs:
           - { service: reputation-service, package: '@dorkar/reputation-service' }
           - { service: moderation-service, package: '@dorkar/moderation-service' }
           - { service: notification-service, package: '@dorkar/notification-service' }
+          - { service: bidding-service, package: '@dorkar/bidding-service' }
+          - { service: rental-service, package: '@dorkar/rental-service' }
+          - { service: lending-service, package: '@dorkar/lending-service' }
+          - { service: dispute-service, package: '@dorkar/dispute-service' }
+          - { service: messaging-service, package: '@dorkar/messaging-service' }
+          - { service: dashboard-service, package: '@dorkar/dashboard-service' }
           - { service: gateway, package: '@dorkar/gateway' }
     permissions:
       contents: read

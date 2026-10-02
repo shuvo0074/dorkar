@@ -47,7 +47,7 @@ export const m0001Messaging: Migration = {
         other_id uuid not null,
         last_read_seq bigint not null default 0,
         unread_count int not null default 0 check (unread_count >= 0),
-        activity_at timestamptz not null,
+        activity_at timestamptz(3) not null,
         primary key (conversation_id, account_id)
       )`.execute(trx);
     await sql`
