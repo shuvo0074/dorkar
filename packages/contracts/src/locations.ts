@@ -1,0 +1,100 @@
+import { z } from 'zod';
+
+/**
+ * Bangladesh administrative divisions and their 64 districts (zilas). Slugs are stable
+ * identifiers; names are for display. `area` (upazila/thana/neighbourhood) stays free text.
+ */
+export const Divisions = {
+  barishal: { en: 'Barishal', bn: 'বরিশাল' },
+  chattogram: { en: 'Chattogram', bn: 'চট্টগ্রাম' },
+  dhaka: { en: 'Dhaka', bn: 'ঢাকা' },
+  khulna: { en: 'Khulna', bn: 'খুলনা' },
+  mymensingh: { en: 'Mymensingh', bn: 'ময়মনসিংহ' },
+  rajshahi: { en: 'Rajshahi', bn: 'রাজশাহী' },
+  rangpur: { en: 'Rangpur', bn: 'রংপুর' },
+  sylhet: { en: 'Sylhet', bn: 'সিলেট' },
+} as const;
+export type Division = keyof typeof Divisions;
+
+type D = { division: Division; en: string; bn: string };
+export const Districts = {
+  barguna: { division: 'barishal', en: 'Barguna', bn: 'বরগুনা' },
+  barishal: { division: 'barishal', en: 'Barishal', bn: 'বরিশাল' },
+  bhola: { division: 'barishal', en: 'Bhola', bn: 'ভোলা' },
+  jhalokati: { division: 'barishal', en: 'Jhalokati', bn: 'ঝালকাঠি' },
+  patuakhali: { division: 'barishal', en: 'Patuakhali', bn: 'পটুয়াখালী' },
+  pirojpur: { division: 'barishal', en: 'Pirojpur', bn: 'পিরোজপুর' },
+  bandarban: { division: 'chattogram', en: 'Bandarban', bn: 'বান্দরবান' },
+  brahmanbaria: { division: 'chattogram', en: 'Brahmanbaria', bn: 'ব্রাহ্মণবাড়িয়া' },
+  chandpur: { division: 'chattogram', en: 'Chandpur', bn: 'চাঁদপুর' },
+  chattogram: { division: 'chattogram', en: 'Chattogram', bn: 'চট্টগ্রাম' },
+  cumilla: { division: 'chattogram', en: 'Cumilla', bn: 'কুমিল্লা' },
+  'coxs-bazar': { division: 'chattogram', en: 'Cox’s Bazar', bn: 'কক্সবাজার' },
+  feni: { division: 'chattogram', en: 'Feni', bn: 'ফেনী' },
+  khagrachhari: { division: 'chattogram', en: 'Khagrachhari', bn: 'খাগড়াছড়ি' },
+  lakshmipur: { division: 'chattogram', en: 'Lakshmipur', bn: 'লক্ষ্মীপুর' },
+  noakhali: { division: 'chattogram', en: 'Noakhali', bn: 'নোয়াখালী' },
+  rangamati: { division: 'chattogram', en: 'Rangamati', bn: 'রাঙ্গামাটি' },
+  dhaka: { division: 'dhaka', en: 'Dhaka', bn: 'ঢাকা' },
+  faridpur: { division: 'dhaka', en: 'Faridpur', bn: 'ফরিদপুর' },
+  gazipur: { division: 'dhaka', en: 'Gazipur', bn: 'গাজীপুর' },
+  gopalganj: { division: 'dhaka', en: 'Gopalganj', bn: 'গোপালগঞ্জ' },
+  kishoreganj: { division: 'dhaka', en: 'Kishoreganj', bn: 'কিশোরগঞ্জ' },
+  madaripur: { division: 'dhaka', en: 'Madaripur', bn: 'মাদারীপুর' },
+  manikganj: { division: 'dhaka', en: 'Manikganj', bn: 'মানিকগঞ্জ' },
+  munshiganj: { division: 'dhaka', en: 'Munshiganj', bn: 'মুন্সীগঞ্জ' },
+  narayanganj: { division: 'dhaka', en: 'Narayanganj', bn: 'নারায়ণগঞ্জ' },
+  narsingdi: { division: 'dhaka', en: 'Narsingdi', bn: 'নরসিংদী' },
+  rajbari: { division: 'dhaka', en: 'Rajbari', bn: 'রাজবাড়ী' },
+  shariatpur: { division: 'dhaka', en: 'Shariatpur', bn: 'শরীয়তপুর' },
+  tangail: { division: 'dhaka', en: 'Tangail', bn: 'টাঙ্গাইল' },
+  bagerhat: { division: 'khulna', en: 'Bagerhat', bn: 'বাগেরহাট' },
+  chuadanga: { division: 'khulna', en: 'Chuadanga', bn: 'চুয়াডাঙ্গা' },
+  jashore: { division: 'khulna', en: 'Jashore', bn: 'যশোর' },
+  jhenaidah: { division: 'khulna', en: 'Jhenaidah', bn: 'ঝিনাইদহ' },
+  khulna: { division: 'khulna', en: 'Khulna', bn: 'খুলনা' },
+  kushtia: { division: 'khulna', en: 'Kushtia', bn: 'কুষ্টিয়া' },
+  magura: { division: 'khulna', en: 'Magura', bn: 'মাগুরা' },
+  meherpur: { division: 'khulna', en: 'Meherpur', bn: 'মেহেরপুর' },
+  narail: { division: 'khulna', en: 'Narail', bn: 'নড়াইল' },
+  satkhira: { division: 'khulna', en: 'Satkhira', bn: 'সাতক্ষীরা' },
+  jamalpur: { division: 'mymensingh', en: 'Jamalpur', bn: 'জামালপুর' },
+  mymensingh: { division: 'mymensingh', en: 'Mymensingh', bn: 'ময়মনসিংহ' },
+  netrokona: { division: 'mymensingh', en: 'Netrokona', bn: 'নেত্রকোণা' },
+  sherpur: { division: 'mymensingh', en: 'Sherpur', bn: 'শেরপুর' },
+  bogura: { division: 'rajshahi', en: 'Bogura', bn: 'বগুড়া' },
+  chapainawabganj: { division: 'rajshahi', en: 'Chapainawabganj', bn: 'চাঁপাইনবাবগঞ্জ' },
+  joypurhat: { division: 'rajshahi', en: 'Joypurhat', bn: 'জয়পুরহাট' },
+  naogaon: { division: 'rajshahi', en: 'Naogaon', bn: 'নওগাঁ' },
+  natore: { division: 'rajshahi', en: 'Natore', bn: 'নাটোর' },
+  pabna: { division: 'rajshahi', en: 'Pabna', bn: 'পাবনা' },
+  rajshahi: { division: 'rajshahi', en: 'Rajshahi', bn: 'রাজশাহী' },
+  sirajganj: { division: 'rajshahi', en: 'Sirajganj', bn: 'সিরাজগঞ্জ' },
+  dinajpur: { division: 'rangpur', en: 'Dinajpur', bn: 'দিনাজপুর' },
+  gaibandha: { division: 'rangpur', en: 'Gaibandha', bn: 'গাইবান্ধা' },
+  kurigram: { division: 'rangpur', en: 'Kurigram', bn: 'কুড়িগ্রাম' },
+  lalmonirhat: { division: 'rangpur', en: 'Lalmonirhat', bn: 'লালমনিরহাট' },
+  nilphamari: { division: 'rangpur', en: 'Nilphamari', bn: 'নীলফামারী' },
+  panchagarh: { division: 'rangpur', en: 'Panchagarh', bn: 'পঞ্চগড়' },
+  rangpur: { division: 'rangpur', en: 'Rangpur', bn: 'রংপুর' },
+  thakurgaon: { division: 'rangpur', en: 'Thakurgaon', bn: 'ঠাকুরগাঁও' },
+  habiganj: { division: 'sylhet', en: 'Habiganj', bn: 'হবিগঞ্জ' },
+  moulvibazar: { division: 'sylhet', en: 'Moulvibazar', bn: 'মৌলভীবাজার' },
+  sunamganj: { division: 'sylhet', en: 'Sunamganj', bn: 'সুনামগঞ্জ' },
+  sylhet: { division: 'sylhet', en: 'Sylhet', bn: 'সিলেট' },
+} as const satisfies Record<string, D>;
+export type District = keyof typeof Districts;
+
+const districtKeys = Object.keys(Districts) as [District, ...District[]];
+const divisionKeys = Object.keys(Divisions) as [Division, ...Division[]];
+
+/** Location as stored and exchanged. Division is derived from the district, never trusted. */
+export const LocationSchema = z
+  .object({
+    division: z.enum(divisionKeys).optional(),
+    district: z.enum(districtKeys),
+    area: z.string().trim().min(1).max(80).optional(),
+  })
+  .transform((l) => ({ ...l, division: Districts[l.district].division }));
+export type Location = z.output<typeof LocationSchema>;
+export const DistrictSchema = z.enum(districtKeys);

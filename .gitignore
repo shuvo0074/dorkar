@@ -12,3 +12,6 @@ var/
 
 # Claude Code personal settings
 .claude/settings.local.json
+
+# Web app tooling (apps/web lives on main)
+apps/web/

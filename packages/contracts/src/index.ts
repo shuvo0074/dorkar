@@ -2,3 +2,8 @@ export * from './phone';
 export * from './errors';
 export * from './authz';
 export * from './events';
+export * from './marketplace';
+export * from './locations';
+export * from './attributes';
+export * from './marketplace-events';
+export * from './privacy';
