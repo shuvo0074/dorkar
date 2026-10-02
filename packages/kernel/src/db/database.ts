@@ -19,6 +19,8 @@ export interface KernelTables {
     payload: unknown;
     correlation_id: string | null;
     causation_id: string | null;
+    /** W3C traceparent of the producing span (kernelOutboxTraceMigration). */
+    traceparent: string | null;
     occurred_at: Timestamp;
     published_at: Timestamp | null;
     attempts: Generated<number>;

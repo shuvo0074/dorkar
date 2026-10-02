@@ -21,5 +21,7 @@ export * from './db/inbox';
 export * from './idempotency';
 export * from './cursor';
 export * from './http/internal';
+export * from './metrics';
+export * from './trace';
 export * from './service';
 export * from './migrate-cli';

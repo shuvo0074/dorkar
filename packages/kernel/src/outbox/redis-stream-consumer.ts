@@ -1,8 +1,16 @@
 import { EventEnvelopeSchema, eventStreamFor, type EventEnvelope } from '@dorkar/contracts';
 import type { Redis } from 'ioredis';
 import type { Logger } from '../logger';
+import { boundedLabel, type Metrics } from '../metrics';
+import { traceIdOf } from '../trace';
 
-export type EventHandler = (event: EventEnvelope) => Promise<void>;
+/**
+ * What a handler did with an event: `processed` (default when it returns nothing), `duplicate`
+ * (already processed, e.g. found in the inbox) or `ignored` (a type this consumer does not
+ * subscribe to; not counted in metrics).
+ */
+export type HandleOutcome = 'processed' | 'duplicate' | 'ignored';
+export type EventHandler = (event: EventEnvelope) => Promise<void | HandleOutcome>;
 
 export interface RedisStreamConsumerOptions {
   /** Producer whose stream to read (`events:<producer>`). */
@@ -19,6 +27,8 @@ export interface RedisStreamConsumerOptions {
   retryAfterMs?: number;
   /** After this many deliveries the message goes to the dead-letter stream. */
   maxDeliveries?: number;
+  /** `events_handled_total` / `event_handle_duration_seconds`. */
+  metrics?: Metrics;
 }
 
 export const deadLetterStreamFor = (producer: string, group: string) =>
@@ -153,13 +163,30 @@ export class RedisStreamConsumer {
       await this.deadLetter([id, fields], 'malformed event');
       return;
     }
+    const started = performance.now();
+    const record = (outcome: Exclude<HandleOutcome, 'ignored'> | 'failed') => {
+      const type = boundedLabel(event.type);
+      this.opts.metrics?.eventsHandled.inc({ type, outcome });
+      this.opts.metrics?.eventHandleDuration.observe(
+        { type },
+        (performance.now() - started) / 1000,
+      );
+    };
     try {
-      await this.opts.handler(event);
+      const outcome = (await this.opts.handler(event)) ?? 'processed';
       await this.redis.xack(this.stream, this.opts.group, id);
+      if (outcome !== 'ignored') record(outcome);
     } catch (err) {
+      record('failed');
       // Left pending → retried after retryAfterMs, dead-lettered after maxDeliveries.
       this.opts.logger.warn(
-        { err, eventId: event.id, type: event.type, correlationId: event.correlationId },
+        {
+          err,
+          eventId: event.id,
+          type: event.type,
+          correlationId: event.correlationId,
+          traceId: traceIdOf(event.traceparent),
+        },
         'event handler failed; will retry',
       );
     }
@@ -171,7 +198,12 @@ export class RedisStreamConsumer {
       .xadd(this.dlq, '*', ...fields, 'sourceId', id, 'reason', reason)
       .xack(this.stream, this.opts.group, id)
       .exec();
-    this.opts.logger.error({ streamId: id, stream: this.stream, reason }, 'event dead-lettered');
+    const type = fieldValue(fields, 'type');
+    this.opts.metrics?.eventsHandled.inc({ type: boundedLabel(type), outcome: 'dead_lettered' });
+    this.opts.logger.error(
+      { streamId: id, stream: this.stream, type, reason },
+      'event dead-lettered',
+    );
   }
 }
 

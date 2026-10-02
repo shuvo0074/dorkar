@@ -22,9 +22,11 @@ import {
 } from 'fastify-type-provider-zod';
 import { isProductionLike, type BaseConfig } from '../config';
 import type { RequestContext } from '../context';
-import { pseudonymize, uuidv7 } from '../crypto';
+import { pseudonymize, safeEqual, sha256, uuidv7 } from '../crypto';
 import { AppError } from '../errors';
 import type { Logger } from '../logger';
+import type { Metrics } from '../metrics';
+import { childTraceparent, runInScope, traceIdOf, TRACEPARENT_HEADER } from '../trace';
 
 export type App = FastifyInstance<
   RawServerDefault,
@@ -54,6 +56,13 @@ export interface HttpServerOptions {
   ipHashKey: string;
   readiness: ReadinessCheck[];
   openapi?: { title: string; description?: string };
+  /** Request metrics (`http_request_duration_seconds`, rate-limit rejections). */
+  metrics?: Metrics;
+  /**
+   * Enables `GET /metrics` (Prometheus text format) for callers presenting
+   * `Authorization: Bearer <token>`. Without a token the route does not exist (404).
+   */
+  metricsToken?: string | undefined;
 }
 
 declare module 'fastify' {
@@ -64,6 +73,11 @@ declare module 'fastify' {
 }
 
 const SAFE_ID = /^[A-Za-z0-9._:-]{8,128}$/;
+export const METRICS_PATH = '/metrics';
+
+/** Operational endpoints that are neither logged per request nor measured as traffic. */
+const isOperational = (url: string) =>
+  url.startsWith('/health/') || url === METRICS_PATH || url.startsWith(`${METRICS_PATH}?`);
 
 function errorBody(
   request: FastifyRequest,
@@ -112,20 +126,46 @@ export async function createHttpServer(opts: HttpServerOptions): Promise<App> {
     const incoming = request.headers['x-correlation-id'];
     request.correlationId =
       typeof incoming === 'string' && SAFE_ID.test(incoming) ? incoming : request.id;
+    // Continue the caller's trace (new span id for this hop) or start one: the gateway starts
+    // the trace for public traffic that carries none.
+    const traceparent = childTraceparent(request.headers[TRACEPARENT_HEADER]);
     request.ctx = {
       requestId: request.id,
       correlationId: request.correlationId,
+      traceparent,
       ipHash: request.ip ? pseudonymize(opts.ipHashKey, request.ip) : null,
       userAgent: request.headers['user-agent']?.slice(0, 256) ?? null,
       actor: null,
     };
-    request.log = request.log.child({ correlationId: request.correlationId });
+    request.log = request.log.child({
+      correlationId: request.correlationId,
+      traceId: traceIdOf(traceparent),
+    });
     void reply.header('x-request-id', request.id);
     void reply.header('x-correlation-id', request.correlationId);
   });
 
+  // Handlers (and everything they await) run in an execution scope carrying the trace and the
+  // metrics, so events, internal calls and idempotency replays pick them up without plumbing.
+  // A callback hook after body parsing, so the scope reliably reaches the handler.
+  app.addHook('preHandler', (request, _reply, done) => {
+    runInScope(
+      {
+        traceparent: request.ctx.traceparent ?? childTraceparent(),
+        ...(opts.metrics ? { metrics: opts.metrics } : {}),
+      },
+      done,
+    );
+  });
+
   app.addHook('onResponse', async (request, reply) => {
-    if (request.url.startsWith('/health')) return;
+    if (isOperational(request.url)) return;
+    opts.metrics?.observeHttp(
+      request.method,
+      request.routeOptions.url,
+      reply.statusCode,
+      reply.elapsedTime / 1000,
+    );
     request.log.info(
       {
         method: request.method,
@@ -171,6 +211,9 @@ export async function createHttpServer(opts: HttpServerOptions): Promise<App> {
 
   app.setErrorHandler((error, request, reply) => {
     if (error instanceof AppError) {
+      if (error.code === 'RATE_LIMITED') {
+        opts.metrics?.rateLimitRejections.inc({ route: request.routeOptions.url ?? 'unmatched' });
+      }
       if (error.headers) void reply.headers(error.headers);
       return reply
         .status(error.status)
@@ -229,6 +272,26 @@ export async function createHttpServer(opts: HttpServerOptions): Promise<App> {
       .status(ok ? 200 : 503)
       .send({ status: ok ? 'ok' : 'degraded', checks: Object.fromEntries(results) });
   });
+
+  if (opts.metricsToken && opts.metrics) {
+    const metrics = opts.metrics;
+    // Compare digests: constant time and independent of the presented value's length.
+    const expected = sha256(`Bearer ${opts.metricsToken}`);
+    app.get(METRICS_PATH, { schema: { hide: true } }, async (request, reply) => {
+      const got = request.headers.authorization;
+      if (typeof got !== 'string' || !safeEqual(sha256(got), expected)) {
+        return reply
+          .status(401)
+          .header('www-authenticate', 'Bearer')
+          .send(errorBody(request, 'UNAUTHENTICATED', 'Authentication required.'));
+      }
+      const { contentType, body } = await metrics.render();
+      return reply
+        .header('content-type', contentType)
+        .header('cache-control', 'no-store')
+        .send(body);
+    });
+  }
 
   app.decorate('markShuttingDown', () => {
     shuttingDown = true;

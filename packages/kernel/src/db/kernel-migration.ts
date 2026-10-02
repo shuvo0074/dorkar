@@ -71,3 +71,19 @@ export const kernelMigration: Migration = {
     await sql`drop table outbox`.execute(trx);
   },
 };
+
+/**
+ * Adds `outbox.traceparent` so events carry the producing request's W3C trace context to their
+ * consumers. Nullable, so it is a metadata-only change, safe on a live table. List it after the
+ * other `0000_kernel*` migrations; on an existing database it is applied after the service's own
+ * migrations, which is fine because nothing depends on that order.
+ */
+export const kernelOutboxTraceMigration: Migration = {
+  name: '0000_kernel_outbox_trace',
+  async up(trx) {
+    await sql`alter table outbox add column traceparent text`.execute(trx);
+  },
+  async down(trx) {
+    await sql`alter table outbox drop column traceparent`.execute(trx);
+  },
+};

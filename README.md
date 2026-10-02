@@ -59,9 +59,11 @@ Bootstrap the first admin:
 ```bash
 cp infra/docker/secrets.env.example infra/docker/secrets.env   # fill it in
 docker compose -f infra/docker/compose.yml up --build            # gateway on http://localhost:4000
+# + Prometheus (:9090) and Grafana (:3000, admin/admin); needs METRICS_TOKEN in secrets.env
+docker compose -f infra/docker/compose.yml --profile observability up --build
 ```
 
-`infra/docker/compose.yml` is generated from `scripts/backend-services.mjs` by `node scripts/gen-compose.mjs`.
+`infra/docker/compose.yml` (and `infra/docker/observability/prometheus.yml`) are generated from `scripts/backend-services.mjs` by `node scripts/gen-compose.mjs`.
 
 ## Checks
 

@@ -44,6 +44,15 @@ export const baseEnvSchema = z.object({
 });
 export type BaseConfig = z.infer<typeof baseEnvSchema>;
 
+/**
+ * Bearer token that enables `GET /metrics` (Prometheus). Unset or empty = endpoint disabled (404).
+ * Shared by services and the gateway; the scraper reads it from a file.
+ */
+export const metricsTokenSchema = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z.string().min(32).optional(),
+);
+
 export class ConfigError extends Error {
   constructor(public readonly issues: string[]) {
     super(`Invalid configuration:\n  - ${issues.join('\n  - ')}`);

@@ -16,6 +16,11 @@ export interface Actor {
 export interface RequestContext {
   requestId: string;
   correlationId: string;
+  /**
+   * W3C `traceparent` of the current span (set by the HTTP server; optional so contexts built by
+   * hand stay valid). Propagated on internal calls and event envelopes.
+   */
+  traceparent?: string;
   /** Keyed hash of the client IP — never the raw address. */
   ipHash: string | null;
   userAgent: string | null;

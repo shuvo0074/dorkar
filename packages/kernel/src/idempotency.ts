@@ -2,6 +2,8 @@ import { sql, type Kysely } from 'kysely';
 import { sha256 } from './crypto';
 import type { Migration } from './db/migrator';
 import { AppError, Errors } from './errors';
+import { boundedLabel } from './metrics';
+import { currentScope } from './trace';
 
 /**
  * `Idempotency-Key` support for critical POSTs (accept offer, place bid, create transaction…).
@@ -122,6 +124,7 @@ export async function withIdempotency<T>(
       }
       if (existing.status === 'COMPLETED') {
         const stored = existing.response_body as StoredError | T;
+        currentScope()?.metrics?.idempotencyReplays.inc({ scope: boundedLabel(opts.scope) });
         if (isStoredError(stored)) {
           throw new AppError(stored.__error.code, stored.__error.message, stored.__error.details);
         }

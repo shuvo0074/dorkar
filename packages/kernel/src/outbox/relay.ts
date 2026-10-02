@@ -2,6 +2,7 @@ import type { EventEnvelope } from '@dorkar/contracts';
 import type { Kysely } from 'kysely';
 import type { KernelTables } from '../db/database';
 import type { Logger } from '../logger';
+import type { Metrics } from '../metrics';
 
 /** Port: where committed events go. Redis Streams today; NATS/RabbitMQ later. */
 export interface EventPublisher {
@@ -13,6 +14,7 @@ export interface OutboxRelayOptions {
   batchSize?: number;
   intervalMs?: number;
   maxBackoffMs?: number;
+  metrics?: Metrics;
 }
 
 /**
@@ -58,6 +60,7 @@ export class OutboxRelay {
           aggregateId: r.aggregate_id,
           ...(r.correlation_id ? { correlationId: r.correlation_id } : {}),
           ...(r.causation_id ? { causationId: r.causation_id } : {}),
+          ...(r.traceparent ? { traceparent: r.traceparent } : {}),
           payload: r.payload as Record<string, unknown>,
         })),
       );
@@ -70,6 +73,7 @@ export class OutboxRelay {
           rows.map((r) => r.id),
         )
         .execute();
+      this.opts.metrics?.eventsPublished.inc(rows.length);
       return rows.length;
     });
   }
@@ -85,6 +89,7 @@ export class OutboxRelay {
         if (n === (this.opts.batchSize ?? 100)) delay = 0; // drain backlog quickly
       } catch (err) {
         this.failures++;
+        this.opts.metrics?.outboxPublishFailures.inc();
         delay = Math.min(
           (this.opts.intervalMs ?? 500) * 2 ** this.failures,
           this.opts.maxBackoffMs ?? 30_000,

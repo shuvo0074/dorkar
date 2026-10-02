@@ -1,4 +1,4 @@
-import { baseEnvSchema, isProductionLike, loadConfig } from '@dorkar/kernel';
+import { baseEnvSchema, isProductionLike, loadConfig, metricsTokenSchema } from '@dorkar/kernel';
 import { z } from 'zod';
 
 const bool = z.enum(['true', 'false']).transform((v) => v === 'true');
@@ -56,6 +56,9 @@ export const gatewayEnvSchema = baseEnvSchema
 
     EVENTS_CONSUMER_ENABLED: bool.default(true),
     EVENTS_GROUP: z.string().default('gateway'),
+
+    /** Enables the gateway's own token-guarded `GET /metrics` (never proxied upstream). */
+    METRICS_TOKEN: metricsTokenSchema,
   })
   .superRefine((c, ctx) => {
     if (isProductionLike(c) && c.TRUST_PROXY === false) {

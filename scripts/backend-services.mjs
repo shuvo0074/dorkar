@@ -42,6 +42,8 @@ export function readDevEnv() {
 }
 
 const url = (port) => `http://127.0.0.1:${port}`;
+/** GET /metrics is enabled only when the dev env has a token (older .env.dev files may not). */
+const metricsEnv = (dev) => (dev.METRICS_TOKEN ? { METRICS_TOKEN: dev.METRICS_TOKEN } : {});
 
 /** Environment for one service process, derived from the shared dev secrets. */
 export function serviceEnv(name, dev) {
@@ -62,6 +64,7 @@ export function serviceEnv(name, dev) {
     TRUST_PROXY: '1',
     PII_HASH_KEY: dev.PII_HASH_KEY,
     INTERNAL_API_TOKEN: dev.INTERNAL_API_TOKEN,
+    ...metricsEnv(dev),
     JWKS_URL: `${url(SERVICES.identity.port)}/.well-known/jwks.json`,
     VERIFICATION_URL: url(SERVICES.verification.port),
     PROFILE_URL: url(SERVICES.profile.port),
@@ -115,6 +118,7 @@ export function gatewayEnv(dev) {
     LOG_LEVEL: dev.LOG_LEVEL ?? 'info',
     REDIS_URL: dev.REDIS_URL,
     PII_HASH_KEY: dev.PII_HASH_KEY,
+    ...metricsEnv(dev),
     CORS_ORIGINS: 'http://localhost:5173',
     TRUST_PROXY: 'false',
     ...upstreams,

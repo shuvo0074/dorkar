@@ -3,6 +3,7 @@ import {
   AppError,
   Errors,
   type AccessTokenVerifier,
+  METRICS_PATH,
   type App,
   type RateLimiter,
 } from '@dorkar/kernel';
@@ -17,18 +18,22 @@ export interface EdgeOptions {
 }
 
 const isHealth = (req: FastifyRequest) => req.url.startsWith('/health/');
+/** The gateway's own /metrics has its own bearer token, which is not an access token. */
+const isMetrics = (req: FastifyRequest) =>
+  req.url === METRICS_PATH || req.url.startsWith(`${METRICS_PATH}?`);
 
 /**
  * Edge policy, in order:
  *  1. Authentication — only when a bearer token is presented. Requests without one pass through;
  *     each service decides which endpoints are public. Invalid or revoked tokens stop here.
+ *     `/metrics` is skipped: it is guarded by METRICS_TOKEN instead (and still IP rate limited).
  *  2. Coarse rate limits per client IP and per account. Business limits live in services.
  * Services still verify tokens themselves (defence in depth); the gateway adds immediate
  * revocation and stops abusive traffic before it reaches them.
  */
 export function registerEdgePolicy(app: App, opts: EdgeOptions): void {
   app.addHook('onRequest', async (req) => {
-    if (isHealth(req)) return;
+    if (isHealth(req) || isMetrics(req)) return;
     const header = req.headers.authorization;
     if (header === undefined) return;
     if (!header.startsWith('Bearer ')) throw Errors.unauthenticated();

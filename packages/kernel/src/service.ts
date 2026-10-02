@@ -3,7 +3,7 @@ import type { EventEnvelope } from '@dorkar/contracts';
 import { createRemoteJWKSet } from 'jose';
 import type { Kysely, Transaction } from 'kysely';
 import { z } from 'zod';
-import { baseEnvSchema } from './config';
+import { baseEnvSchema, metricsTokenSchema } from './config';
 import { createDatabase, type Database, type KernelTables } from './db/database';
 import { handleOnce } from './db/inbox';
 import { migrationStatus, type Migration } from './db/migrator';
@@ -14,11 +14,17 @@ import { purgeExpiredIdempotencyKeys, type IdempotencyTables } from './idempoten
 import { startPeriodicJob, type PeriodicJob } from './jobs';
 import { runService } from './lifecycle';
 import type { Logger } from './logger';
+import { Metrics } from './metrics';
 import { createEventFactory, type EventDefinition } from './outbox/outbox';
-import { RedisStreamConsumer } from './outbox/redis-stream-consumer';
+import {
+  deadLetterStreamFor,
+  RedisStreamConsumer,
+  type HandleOutcome,
+} from './outbox/redis-stream-consumer';
 import { RedisStreamPublisher } from './outbox/redis-stream-publisher';
 import { OutboxRelay } from './outbox/relay';
 import { createRedis, type Redis } from './redis';
+import { childTraceparent, runInScope, traceIdOf } from './trace';
 
 const bool = z.enum(['true', 'false']).transform((v) => v === 'true');
 
@@ -34,6 +40,7 @@ export const serviceEnvSchema = baseEnvSchema.extend({
   OUTBOX_RELAY_ENABLED: bool.default(true),
   CONSUMERS_ENABLED: bool.default(true),
   JOBS_ENABLED: bool.default(true),
+  METRICS_TOKEN: metricsTokenSchema,
 });
 export type ServiceConfig = z.infer<typeof serviceEnvSchema>;
 
@@ -43,6 +50,8 @@ export interface ServiceRuntime<DB extends KernelTables> {
   config: ServiceConfig;
   logger: Logger;
   app: App;
+  /** Process metrics registry, served on `/metrics` when METRICS_TOKEN is set. */
+  metrics: Metrics;
   database: Database<DB>;
   db: Kysely<DB>;
   /** Service-private keys (rate limits, caches). */
@@ -101,6 +110,14 @@ export async function createServiceRuntime<DB extends KernelTables>(
   const database = createDatabase<DB>(config);
   const redis = createRedis(config.REDIS_URL, { keyPrefix: opts.producer, logger });
   const bus = createRedis(config.REDIS_URL, { keyPrefix: null, logger });
+  const metrics = new Metrics({
+    service: config.SERVICE_NAME,
+    // Process metrics start a sampler; skip it when nobody can scrape.
+    defaultMetrics: Boolean(config.METRICS_TOKEN),
+    logger,
+  });
+  metrics.observePool(database.pool);
+  metrics.observeOutbox(database.db as unknown as Kysely<KernelTables>);
 
   const verifier =
     opts.verifier ??
@@ -122,6 +139,8 @@ export async function createServiceRuntime<DB extends KernelTables>(
       { name: 'redis', check: async () => void (await redis.ping()) },
     ],
     openapi: opts.openapi,
+    metrics,
+    metricsToken: config.METRICS_TOKEN,
   });
 
   const handlers = new Map<
@@ -140,10 +159,30 @@ export async function createServiceRuntime<DB extends KernelTables>(
     const h = handlers.get(event.type);
     if (!h) return false;
     const payload = h.parse(event.payload); // invalid payload throws → retried, then dead-lettered
-    return handleOnce(database.db, config.SERVICE_NAME, event, (trx) =>
-      h.fn(payload as never, event, trx),
+    // The handler is a new span in the producer's trace; events it emits continue that trace.
+    const traceparent = childTraceparent(event.traceparent);
+    const handled = await runInScope({ traceparent, metrics }, () =>
+      handleOnce(database.db, config.SERVICE_NAME, event, (trx) =>
+        h.fn(payload as never, event, trx),
+      ),
     );
+    logger.debug(
+      {
+        eventId: event.id,
+        type: event.type,
+        correlationId: event.correlationId,
+        traceId: traceIdOf(traceparent),
+        duplicate: !handled,
+      },
+      'event handled',
+    );
+    return handled;
   };
+  const consume = async (event: EventEnvelope): Promise<HandleOutcome> => {
+    if (!handlers.has(event.type)) return 'ignored';
+    return (await deliver(event)) ? 'processed' : 'duplicate';
+  };
+  const observedGroups = new Set<string>();
 
   if (opts.idempotency) {
     jobs.push({
@@ -157,7 +196,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
     database.db as unknown as Kysely<KernelTables>,
     new RedisStreamPublisher(bus, opts.producer),
     logger,
-    { producer: opts.producer },
+    { producer: opts.producer, metrics },
   );
 
   const stopWorkers = async () => {
@@ -172,6 +211,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
     config,
     logger,
     app,
+    metrics,
     database,
     db: database.db,
     redis,
@@ -202,9 +242,19 @@ export async function createServiceRuntime<DB extends KernelTables>(
               group: config.SERVICE_NAME,
               consumer: `${hostname()}-${process.pid}`,
               logger,
-              handler: async (e) => void (await deliver(e)),
+              metrics,
+              handler: consume,
             },
           );
+          if (!observedGroups.has(producer)) {
+            observedGroups.add(producer);
+            metrics.observeConsumerGroup(
+              bus,
+              producer,
+              config.SERVICE_NAME,
+              deadLetterStreamFor(producer, config.SERVICE_NAME),
+            );
+          }
           await consumer.start();
           consumers.push(consumer);
         }
@@ -217,6 +267,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
               intervalMs: j.intervalMs,
               db: database.db,
               logger,
+              metrics,
               run: j.run,
             }),
           );
@@ -227,6 +278,7 @@ export async function createServiceRuntime<DB extends KernelTables>(
     async close() {
       await app.close();
       await stopWorkers();
+      metrics.forgetSources();
       redis.disconnect();
       bus.disconnect();
       await database.close();

@@ -1,0 +1,107 @@
+# Alert rules for docs/architecture/07-operations.md §4. Thresholds are starting points for the
+# MVP traffic level; tune them per route once real baselines exist.
+# Gauges that describe shared state (outbox, consumer groups) are reported by every instance of a
+# service, so rules aggregate them with max by (service), never sum.
+groups:
+  - name: dorkar-availability
+    rules:
+      - alert: TargetDown
+        expr: up == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $labels.job }} is not answering /metrics'
+          description: 'Scrape of {{ $labels.instance }} has failed for 2 minutes (down, or METRICS_TOKEN mismatch).'
+
+      - alert: High5xxRate
+        expr: |
+          sum by (service) (rate(http_request_duration_seconds_count{status_code=~"5.."}[5m]))
+            / sum by (service) (rate(http_request_duration_seconds_count[5m]))
+            > 0.02
+          and sum by (service) (rate(http_request_duration_seconds_count[5m])) > 0.1
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $labels.service }}: {{ $value | humanizePercentage }} of requests fail with 5xx'
+
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(0.95,
+            sum by (service, route, le) (rate(http_request_duration_seconds_bucket{route!="unmatched"}[5m])))
+            > 0.5
+          and sum by (service, route) (rate(http_request_duration_seconds_count{route!="unmatched"}[5m])) > 0.05
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }} {{ $labels.route }}: p95 {{ $value | humanizeDuration }} (SLO 500 ms)'
+
+  - name: dorkar-events
+    rules:
+      - alert: OutboxLag
+        expr: max by (service) (outbox_oldest_unpublished_age_seconds) > 60
+        for: 1m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $labels.service }}: oldest unpublished event is {{ $value | humanizeDuration }} old'
+          description: 'The outbox relay is not publishing (Redis down, relay disabled, or failing). See outbox_publish_failures_total.'
+
+      - alert: OutboxPublishFailures
+        expr: sum by (service) (increase(outbox_publish_failures_total[10m])) > 3
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }}: outbox relay failed {{ $value }} times in 10 minutes'
+
+      - alert: EventsDeadLettered
+        expr: sum by (service, type) (increase(events_handled_total{outcome="dead_lettered"}[15m])) > 0
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $labels.service }} dead-lettered {{ $labels.type }} events'
+          description: 'Inspect the dlq:events:<producer>:<service> stream, fix, then replay.'
+
+      - alert: DeadLetterBacklog
+        expr: max by (service, stream) (dead_letter_stream_length) > 0
+        for: 30m
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }}: {{ $value }} entries waiting in the dead-letter stream for {{ $labels.stream }}'
+
+      - alert: ConsumerLagGrowing
+        expr: |
+          max by (service, stream) (consumer_group_lag) > 100
+          and max by (service, stream) (deriv(consumer_group_lag[10m])) > 0
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $labels.service }} is falling behind on {{ $labels.stream }} (lag {{ $value }})'
+
+      - alert: EventHandlerFailures
+        expr: |
+          sum by (service, type) (rate(events_handled_total{outcome="failed"}[10m]))
+            / sum by (service, type) (rate(events_handled_total[10m]))
+            > 0.1
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }}: more than 10% of {{ $labels.type }} deliveries fail (retried)'
+
+  - name: dorkar-jobs-and-resources
+    rules:
+      - alert: JobFailing
+        expr: sum by (service, job) (increase(job_runs_total{outcome="failed"}[30m])) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }}: periodic job {{ $labels.job }} failed'
+
+      - alert: DbPoolSaturated
+        expr: max by (service) (db_pool_clients_waiting) > 0
+        for: 5m
+        labels: { severity: ticket }
+        annotations:
+          summary: '{{ $labels.service }}: queries are queueing for a Postgres connection'
+
+      - alert: RateLimitSpike
+        expr: sum by (service) (rate(rate_limit_rejections_total[5m])) > 5
+        for: 10m
+        labels: { severity: info }
+        annotations:
+          summary: '{{ $labels.service }}: {{ $value }} requests/s rejected by rate limits (abuse or misbehaving client)'

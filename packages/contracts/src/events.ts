@@ -10,6 +10,12 @@ export const EventEnvelopeSchema = z.object({
   aggregateId: z.string(),
   correlationId: z.string().optional(),
   causationId: z.string().optional(),
+  /**
+   * W3C trace context of the producing span. Optional and loosely validated on purpose: older
+   * producers omit it, and a malformed value is ignored by consumers rather than dead-lettering
+   * the event.
+   */
+  traceparent: z.string().max(128).optional(),
   payload: z.record(z.string(), z.unknown()),
 });
 export type EventEnvelope<P = Record<string, unknown>> = Omit<
