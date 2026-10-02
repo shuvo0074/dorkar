@@ -146,6 +146,8 @@ export interface VerificationGateway {
       /** Budget max in poisha, when known. */
       amount: number | null;
     },
-    ctx: Pick<RequestContext, 'requestId' | 'correlationId'>,
+    ctx: Pick<RequestContext, 'requestId' | 'correlationId'> & {
+      actor?: RequestContext['actor'] | undefined;
+    },
   ): Promise<{ satisfied: boolean; missing: string[] }>;
 }

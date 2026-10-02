@@ -15,6 +15,8 @@ export function httpVerificationGateway(call: InternalClient): VerificationGatew
     async evaluate(q, ctx) {
       const params = new URLSearchParams({
         accountId: q.accountId,
+        // Roles from the verified token, so ROLE-scoped policies (e.g. BUSINESS) apply.
+        ...(ctx.actor ? { roles: ctx.actor.roles.join(',') } : {}),
         action: q.action,
         categoryId: q.categoryId,
         mode: q.mode,

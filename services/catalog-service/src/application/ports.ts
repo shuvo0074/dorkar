@@ -120,6 +120,8 @@ export interface VerificationDecision {
 export interface VerificationGateway {
   evaluate(
     q: { accountId: string; action: 'LISTING_PUBLISH'; categoryId: string; amount: number },
-    ctx: Pick<RequestContext, 'requestId' | 'correlationId'>,
+    ctx: Pick<RequestContext, 'requestId' | 'correlationId'> & {
+      actor?: RequestContext['actor'] | undefined;
+    },
   ): Promise<VerificationDecision>;
 }

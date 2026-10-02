@@ -44,7 +44,10 @@ import type {
 } from './ports';
 
 type EventFactory = ServiceRuntime<never>['event'];
-type Ctx = Pick<RequestContext, 'requestId' | 'correlationId'>;
+/** The actor travels along so policy checks can use the caller's roles. */
+type Ctx = Pick<RequestContext, 'requestId' | 'correlationId'> & {
+  actor?: RequestContext['actor'] | undefined;
+};
 
 export interface NeedInput {
   mode: NeedMode;
