@@ -1,13 +1,16 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { useCan } from '../../features/auth/permissions';
 import { useSession } from '../../features/auth/session';
 import { useI18n } from '../../lib/i18n';
-import { CatalogIcon, InkDefs, PenIcon, PersonIcon } from '../glyphs/glyphs';
+import { CatalogIcon, InkDefs, PenIcon, PersonIcon, TallyIcon } from '../glyphs/glyphs';
 
 /** Masthead, navigation (top on wide screens, thumb bar on phones), footer, route focus. */
 export function AppShell() {
   const { t, lang, setLang } = useI18n();
   const { status } = useSession();
+  const can = useCan();
+  const signedIn = status === 'signedIn';
   const location = useLocation();
   const lastPath = useRef(location.pathname);
 
@@ -20,8 +23,8 @@ export function AppShell() {
     requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus());
   }, [location.pathname, location.hash]);
 
-  const accountTo = status === 'signedIn' ? '/account' : '/sign-in';
-  const accountLabel = status === 'signedIn' ? t('nav.account') : t('nav.signIn');
+  const accountTo = signedIn ? '/account' : '/sign-in';
+  const accountLabel = signedIn ? t('nav.account') : t('nav.signIn');
   const toggle = (
     <button
       type="button"
@@ -66,6 +69,8 @@ export function AppShell() {
             <NavLink to="/" end>
               {t('nav.catalog')}
             </NavLink>
+            {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
+            {signedIn && can('dashboard:read') && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
             <NavLink to={accountTo}>{accountLabel}</NavLink>
             {toggle}
           </nav>
@@ -86,7 +91,7 @@ export function AppShell() {
         </footer>
       </div>
 
-      <nav className="bottomnav" aria-label={t('nav.main')}>
+      <nav className={signedIn ? 'bottomnav bottomnav--4' : 'bottomnav'} aria-label={t('nav.main')}>
         <NavLink to="/" end>
           <CatalogIcon />
           {t('nav.catalog')}
@@ -102,6 +107,12 @@ export function AppShell() {
           <PenIcon />
           {t('nav.post')}
         </Link>
+        {signedIn && (
+          <NavLink to="/dashboard">
+            <TallyIcon />
+            {t('nav.dashboard')}
+          </NavLink>
+        )}
         <NavLink to={accountTo}>
           <PersonIcon />
           {accountLabel}

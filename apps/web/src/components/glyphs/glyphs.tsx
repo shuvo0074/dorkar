@@ -206,6 +206,49 @@ export const PersonGlyph = () => (
   </Glyph>
 );
 
+/** Auction hammer over its block. */
+export const GavelGlyph = () => (
+  <Glyph>
+    <path d="M17.6 9.4l11 11-4.6 4.6-11-11z" />
+    <path d="M26.3 22.7 40.8 37.2" strokeWidth="2.3" />
+    <path d="M7 41.5h18v-4.6H7z" />
+    <L d="M15.3 11.7l11 11M20.5 8.6l4.2-4.2M30.8 18.9 35 14.7M22.6 6.5l10.9 10.9" />
+    <H d="M17 13.4l2.4-2.4M19 15.4l2.4-2.4M21 17.4l2.4-2.4M23 19.4l2.4-2.4M9 38.6h14M9 40.1h14M4 44h26" />
+  </Glyph>
+);
+
+/** A rental key on its tag. */
+export const KeyGlyph = () => (
+  <Glyph>
+    <circle cx="15" cy="17" r="8.5" />
+    <circle cx="12.6" cy="14.6" r="2.4" />
+    <path d="M21 23l17 17M31.5 33.5l4-4M35.5 37.5l3.6-3.6" />
+    <L d="M27.5 9.5l7.5 1.5-1.5 7.5-7.5-1.5zM21.5 12.5l4.5-1.6" />
+    <H d="M9.8 21.8a8.5 8.5 0 0 0 10.4 1.2M8 19.4a8.5 8.5 0 0 0 4 4.9M28.6 11.4l4.6.9M28.2 13.4l4.6.9M27.8 15.4l4.6.9" />
+  </Glyph>
+);
+
+/** A lent crate, handle up. */
+export const CrateGlyph = () => (
+  <Glyph>
+    <path d="M7 18.5h34v21H7z" />
+    <path d="M18 18.5v-5a6 6 0 0 1 12 0v5" />
+    <L d="M7 25.5h34M7 32.5h34M18.5 18.5v21M29.5 18.5v21" />
+    <H d="M9 20.5l5 5M9 27.5l5 5M20.5 27.5l5 5M31.5 20.5l5 5M31.5 34.5l5 5M4 43h40" />
+  </Glyph>
+);
+
+/** Balance scales: a dispute being weighed. */
+export const ScalesGlyph = () => (
+  <Glyph>
+    <path d="M24 6v34M15 41.5h18M9 12.5h30" strokeWidth="2.3" />
+    <path d="M9 12.5 3.5 26h11zM39 12.5 33.5 26h11z" />
+    <L d="M3.5 26a5.5 3.5 0 0 0 11 0M33.5 26a5.5 3.5 0 0 0 11 0" />
+    <circle className="fill" cx="24" cy="6" r="1.6" />
+    <H d="M5.5 28.2h7M34.5 28.2h8M19 38.5h10M17 44h14" />
+  </Glyph>
+);
+
 /* Navigation set: same hand, plus a dot that fills on the current route. */
 export const CatalogIcon = () => (
   <Glyph>
@@ -227,6 +270,16 @@ export const PersonIcon = () => (
     <circle cx="24" cy="15.5" r="7" />
     <path d="M10.5 41c.6-8.3 6.4-13.5 13.5-13.5S36.9 32.7 37.5 41" />
     <circle className="navdot" cx="38" cy="10" r="3" />
+  </Glyph>
+);
+
+/** Ledger sheet with tally bars: the personal dashboard. */
+export const TallyIcon = () => (
+  <Glyph>
+    <path d="M9 6.5h30v35H9z" />
+    <path d="M15 34V24M22 34V17M29 34V27" strokeWidth="2.6" />
+    <path d="M13 37.5h22" />
+    <circle className="navdot" cx="36" cy="12" r="3" />
   </Glyph>
 );
 

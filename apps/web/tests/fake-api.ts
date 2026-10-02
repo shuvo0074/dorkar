@@ -5,14 +5,17 @@ type Handler = (
   init: RequestInit,
 ) => { status?: number; body?: unknown; headers?: Record<string, string> };
 
-/** Minimal fetch stub keyed by "METHOD path". Records every call. */
+/**
+ * Minimal fetch stub keyed by "METHOD path". Records every call. A key without a query string
+ * also answers requests to that path with any query.
+ */
 export function fakeApi(routes: Record<string, Handler>) {
   const calls: Array<{ key: string; body: unknown; headers: Record<string, string> }> = [];
   const fetchMock = vi.fn(async (input: string, init: RequestInit = {}) => {
     const key = `${init.method ?? 'GET'} ${input}`;
     const body = init.body ? JSON.parse(init.body as string) : undefined;
     calls.push({ key, body, headers: (init.headers ?? {}) as Record<string, string> });
-    const handler = routes[key];
+    const handler = routes[key] ?? routes[key.split('?')[0]!];
     if (!handler)
       return new Response(JSON.stringify({ error: { code: 'NOT_FOUND', message: key } }), {
         status: 404,

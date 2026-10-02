@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { LaptopGlyph, PersonGlyph, PhoneGlyph } from '../components/glyphs/glyphs';
 import { Biro } from '../components/ui/Biro';
+import { LedgerSkeleton, LoadError } from '../components/ui/Status';
 import { accountApi, type DeviceView } from '../features/account/api';
 import { useSession } from '../features/auth/session';
 import { errorMessage } from '../lib/errors';
@@ -98,7 +99,9 @@ function Devices() {
         <h2 id="devices-title">{t('devices.title')}</h2>
       </div>
       {devices.isPending && <LedgerSkeleton />}
-      {devices.isError && <LoadError onRetry={() => void devices.refetch()} />}
+      {devices.isError && (
+        <LoadError message={t('account.error')} onRetry={() => void devices.refetch()} />
+      )}
       {devices.data && devices.data.length === 0 && <p className="muted">{t('devices.empty')}</p>}
       {devices.data && devices.data.length > 0 && (
         <ul className="ledger">
@@ -174,7 +177,9 @@ function Sessions() {
         <h2 id="sessions-title">{t('sessions.title')}</h2>
       </div>
       {sessions.isPending && <LedgerSkeleton />}
-      {sessions.isError && <LoadError onRetry={() => void sessions.refetch()} />}
+      {sessions.isError && (
+        <LoadError message={t('account.error')} onRetry={() => void sessions.refetch()} />
+      )}
       {sessions.data && (
         <ul className="ledger">
           {sessions.data.map((s, i) => (
@@ -247,29 +252,5 @@ function SignOutEverywhere() {
         </div>
       )}
     </section>
-  );
-}
-
-function LedgerSkeleton() {
-  return (
-    <div aria-hidden="true" style={{ display: 'grid', gap: 14, paddingTop: 8 }}>
-      <div className="skeleton" style={{ width: '70%' }} />
-      <div className="skeleton" style={{ width: '45%' }} />
-    </div>
-  );
-}
-
-function LoadError({ onRetry }: { onRetry: () => void }) {
-  const { t } = useI18n();
-  return (
-    <div className="alert" role="alert">
-      <span />
-      <span>
-        {t('account.error')}{' '}
-        <button type="button" className="linkbtn" onClick={onRetry}>
-          {t('account.retry')}
-        </button>
-      </span>
-    </div>
   );
 }

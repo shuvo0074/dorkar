@@ -290,7 +290,18 @@ A 108px square badge (2px ink rule) with the person etching, circled in ballpoin
 
 - **Masthead:** wordmark DORKAR | দরকার (Anton plus condensed Bengali, separated by a 2px ink bar), 3px hall-red rule beneath.
 - **Top nav (900px+):** Anton 1.3rem caps; the current route is underlined 3px in hall red, 0.25em offset. Language toggle is a 1.5px outlined 4px-cornered button, min 44px, set in the other language's face.
-- **Bottom nav (under 900px):** fixed three-column bar on newsprint with a 2px ink top rule; 26px drawn icons over 0.95rem Anton labels; the current route fills its navdot.
+- **Bottom nav (under 900px):** fixed bar on newsprint with a 2px ink top rule; 26px drawn icons over 0.95rem Anton labels (0.85rem with four items); the current route fills its navdot. Three items signed out (Catalog, Post, Sign in), four signed in (adds Dashboard). Staff reach the desk from the dashboard and the top nav.
+
+### Dashboards
+
+The personal dashboard (`/dashboard`), the staff desk (`/desk`) and the activity log (`/desk/activity`) are built from the same printed parts:
+
+- **Tally:** a ruled grid of big Anton figures (2.4rem, up to 3.6rem on the personal tally) over 0.85rem Courier caps labels; 1.5px rules, 2px top rule. Two columns on phones, four from 900px. The one figure that asks for action (offers waiting for you) is circled in ballpoint when it is above zero.
+- **Segmented choice:** a strip of ruled cells (period, day/week, activity scope); the chosen cell is printed solid ink. Real radio inputs underneath, so keyboard and screen readers get a radio group.
+- **Figures table:** a ruled ledger with Anton column heads in ink-soft and tabular Courier figures right-aligned. Change is shown as ▲/▼ with a sign and ink weight (bold when up). Never red or green: the three-inks rule holds.
+- **Ink chart:** HTML columns with a 1.5px ink outline and a printed 45° hatch tile (an SVG pattern, not a gradient) standing on a 2px baseline. The tallest column is solid ink with the wear mask, and its figure is circled in ballpoint, drawing on once when the measure changes. Values are repeated in a visually hidden table.
+- **Funnel:** red step numerals as in How it works, each with a hatched bar sized to the first step (capped at full width). A later step larger than the one before is explained in words, not shown as a percentage over 100.
+- **Activity rows:** ledger rows with a three-letter service code in the plate; the row expands (native details) into a hairline-ruled fact box with the action code, actor, target, request, IP fingerprint and recorded facts, and one-click "only this account / item" filters. Server labels are English; Bangla pages use a Bangla table for member-visible actions and mark any English fallback `lang="en"`.
 
 ### Motion
 

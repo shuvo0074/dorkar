@@ -108,12 +108,13 @@ export interface RequestOptions {
   auth?: boolean;
 }
 
-export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+/** Sends with the access token, refreshing once on 401; throws ApiError on failure. */
+async function request(path: string, opts: RequestOptions, accept: string): Promise<Response> {
   const auth = opts.auth ?? true;
   if (auth && current && current.expiresAt - Date.now() < 30_000) await refreshSession();
 
   const send = () => {
-    const headers: Record<string, string> = { accept: 'application/json' };
+    const headers: Record<string, string> = { accept };
     if (opts.body !== undefined) headers['content-type'] = 'application/json';
     if (auth && current) headers['authorization'] = `Bearer ${current.token}`;
     return fetch(path, {
@@ -137,6 +138,17 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
   }
 
   if (!res.ok) throw await parseError(res);
+  return res;
+}
+
+export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T> {
+  const res = await request(path, opts, 'application/json');
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** For downloads (CSV exports): same auth and refresh rules, body returned as a Blob. */
+export async function apiBlob(path: string, opts: RequestOptions = {}): Promise<Blob> {
+  const res = await request(path, opts, '*/*');
+  return res.blob();
 }

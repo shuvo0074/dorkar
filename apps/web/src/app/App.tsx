@@ -10,6 +10,9 @@ import HomeRoute from '../routes/HomeRoute';
 // Home is the landing page and stays in the main bundle (LCP); the rest load on demand.
 const SignInRoute = lazy(() => import('../routes/SignInRoute'));
 const AccountRoute = lazy(() => import('../routes/AccountRoute'));
+const DashboardRoute = lazy(() => import('../routes/DashboardRoute'));
+const DeskRoute = lazy(() => import('../routes/DeskRoute'));
+const ActivityRoute = lazy(() => import('../routes/ActivityRoute'));
 const NotFoundRoute = lazy(() => import('../routes/NotFoundRoute'));
 
 export const routes = [
@@ -19,6 +22,9 @@ export const routes = [
       { index: true, element: <HomeRoute /> },
       { path: 'sign-in', element: <SignInRoute /> },
       { path: 'account', element: <AccountRoute /> },
+      { path: 'dashboard', element: <DashboardRoute /> },
+      { path: 'desk', element: <DeskRoute /> },
+      { path: 'desk/activity', element: <ActivityRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },
