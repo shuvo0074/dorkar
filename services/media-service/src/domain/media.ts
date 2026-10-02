@@ -29,8 +29,32 @@ export interface Variant {
 }
 export type Variants = Partial<Record<VariantName, Variant>>;
 
-/** Who may read the object without it being public. */
-export const PRIVATE_READ_PERMISSION: Permission = 'verification:nid:read';
+/** Purposes whose objects are never public. */
+export const PrivatePurposes = ['VERIFICATION', 'MESSAGE', 'DISPUTE'] as const;
+export type PrivatePurpose = (typeof PrivatePurposes)[number];
+export const isPrivatePurpose = (p: MediaPurpose): p is PrivatePurpose =>
+  (PrivatePurposes as readonly string[]).includes(p);
+
+/** Staff permission that reads private objects of each purpose (besides owner and grantees). */
+export const PRIVATE_READ_PERMISSIONS: Readonly<Record<PrivatePurpose, Permission>> = {
+  VERIFICATION: 'verification:nid:read',
+  DISPUTE: 'dispute:read',
+  MESSAGE: 'moderation:case:read',
+};
+
+/**
+ * Purposes other services may grant read access to (conversation / case participants).
+ * Verification documents are never shared this way.
+ */
+export const GrantablePurposes = ['MESSAGE', 'DISPUTE'] as const;
+export type GrantablePurpose = (typeof GrantablePurposes)[number];
+export const MAX_GRANT_MEDIA = 10;
+export const MAX_GRANT_ACCOUNTS = 10;
+/** Recorded on each grant: the service whose participants received it. */
+export const GRANTING_SERVICE: Readonly<Record<GrantablePurpose, string>> = {
+  MESSAGE: 'messaging-service',
+  DISPUTE: 'dispute-service',
+};
 
 /** Why processing refused an upload (stored, returned to the owner, put in MediaRejected). */
 export type RejectionReason =
@@ -61,7 +85,7 @@ export interface Media {
 }
 
 export const visibilityFor = (purpose: MediaPurpose): Visibility =>
-  purpose === 'VERIFICATION' ? 'PRIVATE' : 'PUBLIC';
+  isPrivatePurpose(purpose) ? 'PRIVATE' : 'PUBLIC';
 
 export const isImage = (t: string): t is ImageType => (ImageTypes as readonly string[]).includes(t);
 
@@ -146,19 +170,60 @@ export interface Reader {
   permissions: ReadonlySet<Permission>;
 }
 
+/** Staff may read a private object of this purpose through their role. */
+export function hasStaffRead(purpose: MediaPurpose, reader: Reader | null): boolean {
+  if (!reader || !isPrivatePurpose(purpose)) return false;
+  return reader.permissions.has(PRIVATE_READ_PERMISSIONS[purpose]);
+}
+
+/**
+ * Whether a grant lookup could change the answer: a READY private object read by someone who
+ * is neither its owner nor staff for its purpose.
+ */
+export function needsGrant(
+  m: Pick<Media, 'ownerId' | 'status' | 'visibility' | 'purpose'>,
+  reader: Reader | null,
+): reader is Reader {
+  return (
+    !!reader &&
+    m.status === 'READY' &&
+    m.visibility === 'PRIVATE' &&
+    reader.id !== m.ownerId &&
+    !hasStaffRead(m.purpose, reader)
+  );
+}
+
 /**
  * Owners see their own media in any live state. Others see only READY media: public media
- * to anyone, private media only with the verification reviewer permission.
+ * to anyone; private media with the purpose's staff permission or an explicit grant.
  */
 export function canRead(
-  m: Pick<Media, 'ownerId' | 'status' | 'visibility'>,
+  m: Pick<Media, 'ownerId' | 'status' | 'visibility' | 'purpose'>,
   reader: Reader | null,
+  granted = false,
 ) {
   if (m.status === 'DELETED') return false;
   if (reader && reader.id === m.ownerId) return true;
   if (m.status !== 'READY') return false;
   if (m.visibility === 'PUBLIC') return true;
-  return !!reader?.permissions.has(PRIVATE_READ_PERMISSION);
+  return hasStaffRead(m.purpose, reader) || (!!reader && granted);
+}
+
+// ---- grants
+
+export type GrantProblem = 'NOT_FOUND' | 'NOT_OWNED' | 'WRONG_PURPOSE' | 'DELETED';
+
+/** Why one referenced object cannot be shared, or null when it can. */
+export function grantProblem(
+  m: Pick<Media, 'ownerId' | 'status' | 'purpose'> | null,
+  ownerId: string,
+  purpose: GrantablePurpose,
+): GrantProblem | null {
+  if (!m) return 'NOT_FOUND';
+  if (m.ownerId !== ownerId) return 'NOT_OWNED';
+  if (m.purpose !== purpose) return 'WRONG_PURPOSE';
+  if (m.status === 'DELETED') return 'DELETED';
+  return null;
 }
 
 // ---- storage keys (always server-generated; never derived from client input)

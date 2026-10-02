@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Role } from '@dorkar/contracts';
-import { startTestService, type TestService } from '@dorkar/kernel/testing';
+import { startTestService, TEST_INTERNAL_TOKEN, type TestService } from '@dorkar/kernel/testing';
 import { sql } from 'kysely';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -37,7 +37,8 @@ afterAll(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-type Purpose = 'LISTING' | 'NEED' | 'OFFER' | 'AVATAR' | 'VERIFICATION';
+type Purpose =
+  'LISTING' | 'NEED' | 'OFFER' | 'AVATAR' | 'VERIFICATION' | 'MESSAGE' | 'DISPUTE' | 'LEND_ITEM';
 type CT = 'image/jpeg' | 'image/png' | 'image/webp' | 'application/pdf';
 
 const outboxTypes = async (id: string) =>
@@ -536,5 +537,218 @@ describe('pending expiry job', () => {
     expect(status[live.mediaId]).toBe('PENDING_UPLOAD');
     expect(await t.svc.storage.get(uploadKey(stale.mediaId))).toBeNull();
     expect(await t.svc.storage.get(uploadKey(live.mediaId))).not.toBeNull();
+  });
+});
+
+describe('phase 2 purposes', () => {
+  it('serves lend-item media publicly', async () => {
+    const owner = randomUUID();
+    const { mediaId } = await upload(owner, 'LEND_ITEM', 'image/png', await png());
+    expect((await complete(owner, mediaId)).json().data.status).toBe('READY');
+    expect((await view(mediaId)).statusCode).toBe(200);
+  });
+
+  it('keeps message and dispute media private and image-only', async () => {
+    for (const purpose of ['MESSAGE', 'DISPUTE'] as const) {
+      const owner = randomUUID();
+      const pdfRes = await startUpload(owner, {
+        purpose,
+        contentType: 'application/pdf',
+        sizeBytes: 100,
+      });
+      expect(pdfRes.statusCode).toBe(422);
+      expect(pdfRes.json().error.details.rule).toBe('TYPE_NOT_ALLOWED');
+      const big = await startUpload(owner, {
+        purpose,
+        contentType: 'image/png',
+        sizeBytes: 10 * MB + 1,
+      });
+      expect(big.json().error.details.rule).toBe('FILE_TOO_LARGE');
+
+      const { mediaId } = await upload(owner, purpose, 'image/png', await png());
+      expect((await complete(owner, mediaId)).json().data.status).toBe('READY');
+      const row = await db()
+        .selectFrom('media_objects')
+        .select('visibility')
+        .where('id', '=', mediaId)
+        .executeTakeFirstOrThrow();
+      expect(row.visibility).toBe('PRIVATE');
+      expect((await view(mediaId)).statusCode).toBe(404);
+      expect((await view(mediaId, { sub: randomUUID() })).statusCode).toBe(404);
+      expect((await view(mediaId, { sub: owner })).statusCode).toBe(200);
+    }
+  });
+
+  it('lets the purpose staff permission read private media', async () => {
+    const owner = randomUUID();
+    const evidence = await upload(owner, 'DISPUTE', 'image/png', await png());
+    await complete(owner, evidence.mediaId);
+    const message = await upload(owner, 'MESSAGE', 'image/png', await png());
+    await complete(owner, message.mediaId);
+
+    const support = { sub: randomUUID(), roles: ['SUPPORT'] as Role[] };
+    const moderator = { sub: randomUUID(), roles: ['MODERATOR'] as Role[] };
+    const viaSupport = await view(evidence.mediaId, support);
+    expect(viaSupport.statusCode).toBe(200);
+    expect((await fetchFile(viaSupport.json().data.urls.original)).statusCode).toBe(200);
+    expect((await view(evidence.mediaId, moderator)).statusCode).toBe(404);
+    expect((await view(message.mediaId, moderator)).statusCode).toBe(200);
+    expect((await view(message.mediaId, support)).statusCode).toBe(404);
+  });
+});
+
+describe('internal grants', () => {
+  const grant = (body: Record<string, unknown>, token: string | null = TEST_INTERNAL_TOKEN) =>
+    app().inject({
+      method: 'POST',
+      url: '/internal/v1/media/grants',
+      headers: token ? { 'x-internal-token': token } : {},
+      payload: body,
+    });
+
+  async function ready(owner: string, purpose: Purpose) {
+    const { mediaId } = await upload(owner, purpose, 'image/png', await png());
+    expect((await complete(owner, mediaId)).json().data.status).toBe('READY');
+    return mediaId;
+  }
+
+  it('requires the internal token and validates the body', async () => {
+    const owner = randomUUID();
+    const mediaId = await ready(owner, 'MESSAGE');
+    const body = {
+      ownerId: owner,
+      mediaIds: [mediaId],
+      accountIds: [randomUUID()],
+      purpose: 'MESSAGE',
+    };
+    expect((await grant(body, null)).statusCode).toBe(403);
+    expect((await grant(body, 'wrong-token-wrong-token-wrong-token-wrong')).statusCode).toBe(403);
+    const user = await app().inject({
+      method: 'POST',
+      url: '/internal/v1/media/grants',
+      headers: await t.auth.as(owner, ['SUPER_ADMIN']),
+      payload: body,
+    });
+    expect(user.statusCode).toBe(403);
+
+    const many = Array.from({ length: 11 }, () => randomUUID());
+    expect((await grant({ ...body, mediaIds: many })).statusCode).toBe(400);
+    expect((await grant({ ...body, accountIds: many })).statusCode).toBe(400);
+    expect((await grant({ ...body, accountIds: [] })).statusCode).toBe(400);
+    expect((await grant({ ...body, purpose: 'VERIFICATION' })).statusCode).toBe(400);
+    expect((await grant({ ...body, extra: 1 })).statusCode).toBe(400);
+  });
+
+  it('gives grantees read access to READY media; others still get 404', async () => {
+    const owner = randomUUID();
+    const peer = randomUUID();
+    const stranger = randomUUID();
+    const mediaId = await ready(owner, 'MESSAGE');
+    expect((await view(mediaId, { sub: peer })).statusCode).toBe(404);
+
+    const res = await grant({
+      ownerId: owner,
+      mediaIds: [mediaId],
+      accountIds: [peer],
+      purpose: 'MESSAGE',
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.created).toBe(1);
+
+    const viaGrant = await view(mediaId, { sub: peer });
+    expect(viaGrant.statusCode).toBe(200);
+    expect((await fetchFile(viaGrant.json().data.urls.thumb)).statusCode).toBe(200);
+    expect((await view(mediaId, { sub: stranger })).statusCode).toBe(404);
+    expect((await view(mediaId)).statusCode).toBe(404);
+
+    const row = await db()
+      .selectFrom('media_grants')
+      .selectAll()
+      .where('media_id', '=', mediaId)
+      .executeTakeFirstOrThrow();
+    expect(row).toMatchObject({ account_id: peer, granted_by_service: 'messaging-service' });
+
+    // Deleting the media revokes everything.
+    await app().inject({
+      method: 'DELETE',
+      url: `/api/v1/media/${mediaId}`,
+      headers: await t.auth.as(owner),
+    });
+    expect((await view(mediaId, { sub: peer })).statusCode).toBe(404);
+  });
+
+  it('is idempotent and audits only new grants', async () => {
+    const owner = randomUUID();
+    const a = await ready(owner, 'DISPUTE');
+    const b = await ready(owner, 'DISPUTE');
+    const peers = [randomUUID(), randomUUID()];
+    const body = { ownerId: owner, mediaIds: [a, b], accountIds: peers, purpose: 'DISPUTE' };
+    expect((await grant(body)).json().data.created).toBe(4);
+    expect((await grant(body)).json().data.created).toBe(0);
+    // Adding a participant later grants only what is new; the owner is skipped.
+    const late = randomUUID();
+    const more = await grant({ ...body, accountIds: [...peers, late, owner] });
+    expect(more.json().data.created).toBe(2);
+
+    const grants = await db()
+      .selectFrom('media_grants')
+      .select(['account_id', 'granted_by_service'])
+      .where('media_id', 'in', [a, b])
+      .execute();
+    expect(grants).toHaveLength(6);
+    expect(grants.every((g) => g.granted_by_service === 'dispute-service')).toBe(true);
+
+    const audit = await db()
+      .selectFrom('audit_log')
+      .select(['action', 'actor_type', 'metadata'])
+      .where('target_id', '=', a)
+      .where('action', '=', 'media.access_granted')
+      .orderBy('occurred_at')
+      .execute();
+    expect(audit).toHaveLength(2);
+    expect(audit[0]).toMatchObject({ actor_type: 'SYSTEM' });
+    expect(audit[1]!.metadata).toMatchObject({ purpose: 'DISPUTE', accountIds: [late] });
+    expect((await view(a, { sub: late })).statusCode).toBe(200);
+  });
+
+  it('refuses media that is missing, not owned, of another purpose or deleted, writing nothing', async () => {
+    const owner = randomUUID();
+    const good = await ready(owner, 'MESSAGE');
+    const other = await ready(randomUUID(), 'MESSAGE');
+    const evidence = await ready(owner, 'DISPUTE');
+    const gone = await ready(owner, 'MESSAGE');
+    await app().inject({
+      method: 'DELETE',
+      url: `/api/v1/media/${gone}`,
+      headers: await t.auth.as(owner),
+    });
+    const missing = randomUUID();
+    const peer = randomUUID();
+
+    const res = await grant({
+      ownerId: owner,
+      mediaIds: [good, other, evidence, gone, missing],
+      accountIds: [peer],
+      purpose: 'MESSAGE',
+    });
+    expect(res.statusCode).toBe(422);
+    const details = res.json().error.details;
+    expect(details.rule).toBe('MEDIA_NOT_GRANTABLE');
+    expect(details.problems).toEqual(
+      expect.arrayContaining([
+        { mediaId: other, problem: 'NOT_OWNED' },
+        { mediaId: evidence, problem: 'WRONG_PURPOSE' },
+        { mediaId: gone, problem: 'DELETED' },
+        { mediaId: missing, problem: 'NOT_FOUND' },
+      ]),
+    );
+    expect(details.problems).toHaveLength(4);
+    const written = await db()
+      .selectFrom('media_grants')
+      .select('media_id')
+      .where('account_id', '=', peer)
+      .execute();
+    expect(written).toHaveLength(0);
+    expect((await view(good, { sub: peer })).statusCode).toBe(404);
   });
 });

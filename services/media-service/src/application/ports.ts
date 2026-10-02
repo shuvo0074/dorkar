@@ -101,8 +101,19 @@ export interface ReadyPatch {
   height: number | null;
 }
 
+export interface NewGrant {
+  mediaId: string;
+  accountId: string;
+  grantedByService: string;
+}
+
 export interface MediaStore {
   get(id: string): Promise<Media | null>;
+  /** Rows by id, share-locked for this transaction (so they cannot be deleted mid-grant). */
+  lockForGrant(ids: readonly string[]): Promise<Media[]>;
+  hasGrant(mediaId: string, accountId: string): Promise<boolean>;
+  /** Inserts what is new (ON CONFLICT DO NOTHING) and returns only those rows. */
+  insertGrants(grants: readonly NewGrant[]): Promise<NewGrant[]>;
   /** Serializes concurrent creations by one owner (transaction-scoped). */
   lockOwner(ownerId: string): Promise<void>;
   countPending(ownerId: string): Promise<number>;

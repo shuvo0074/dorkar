@@ -44,6 +44,47 @@ export function pgMediaStore(db: Executor): MediaStore {
         .executeTakeFirst();
       return r ? toMedia(r) : null;
     },
+    async lockForGrant(ids) {
+      if (ids.length === 0) return [];
+      const rows = await db
+        .selectFrom('media_objects')
+        .selectAll()
+        .select(expired)
+        .where('id', 'in', [...ids])
+        .orderBy('id')
+        .forShare()
+        .execute();
+      return rows.map(toMedia);
+    },
+    async hasGrant(mediaId, accountId) {
+      const r = await db
+        .selectFrom('media_grants')
+        .select('media_id')
+        .where('media_id', '=', mediaId)
+        .where('account_id', '=', accountId)
+        .executeTakeFirst();
+      return !!r;
+    },
+    async insertGrants(grants) {
+      if (grants.length === 0) return [];
+      const rows = await db
+        .insertInto('media_grants')
+        .values(
+          grants.map((g) => ({
+            media_id: g.mediaId,
+            account_id: g.accountId,
+            granted_by_service: g.grantedByService,
+          })),
+        )
+        .onConflict((oc) => oc.columns(['media_id', 'account_id']).doNothing())
+        .returning(['media_id', 'account_id', 'granted_by_service'])
+        .execute();
+      return rows.map((r) => ({
+        mediaId: r.media_id,
+        accountId: r.account_id,
+        grantedByService: r.granted_by_service,
+      }));
+    },
     async lockOwner(ownerId) {
       await sql`select pg_advisory_xact_lock(hashtext(${`media:owner:${ownerId}`}))`.execute(db);
     },

@@ -1,5 +1,6 @@
 import { MediaEvents } from '@dorkar/contracts';
 import {
+  AppError,
   Errors,
   sha256,
   uuidv7,
@@ -14,6 +15,9 @@ import {
   assertUploadAllowed,
   canRead,
   checkSniffedType,
+  GRANTING_SERVICE,
+  grantProblem,
+  needsGrant,
   isImage,
   originalKey,
   READ_URL_TTL_SECONDS,
@@ -21,6 +25,8 @@ import {
   uploadKey,
   variantKey,
   visibilityFor,
+  type GrantablePurpose,
+  type GrantProblem,
   type Media,
   type MediaPurpose,
   type RejectionReason,
@@ -60,6 +66,13 @@ const requireActor = (ctx: RequestContext) => {
 
 /** Verification documents are sensitive: every lifecycle step on them is audited. */
 const audited = (purpose: MediaPurpose) => purpose === 'VERIFICATION';
+
+export interface GrantInput {
+  ownerId: string;
+  mediaIds: string[];
+  accountIds: string[];
+  purpose: GrantablePurpose;
+}
 
 export interface MediaDeps {
   uow: MediaUnitOfWork;
@@ -202,7 +215,11 @@ export class MediaService {
 
   async view(id: string, ctx: RequestContext): Promise<MediaView> {
     const m = await this.d.uow.store.get(id);
-    if (!m || !canRead(m, ctx.actor)) throw Errors.notFound('Media');
+    if (!m) throw Errors.notFound('Media');
+    const granted = needsGrant(m, ctx.actor)
+      ? await this.d.uow.store.hasGrant(m.id, ctx.actor.id)
+      : false;
+    if (!canRead(m, ctx.actor, granted)) throw Errors.notFound('Media');
     if (m.status !== 'READY') return { media: m, urls: {}, urlsExpireAt: null };
 
     const sign = (key: string) => this.d.storage.signedReadUrl(key, READ_URL_TTL_SECONDS);
@@ -233,6 +250,48 @@ export class MediaService {
       throw Errors.conflict('The media changed while deleting it. Try again.');
     }
     await this.bestEffortDelete(allKeys(deleted));
+  }
+
+  /**
+   * Internal: let other participants (of a conversation or dispute case) read an owner's private
+   * media. All-or-nothing; replays add nothing and are not re-audited.
+   */
+  async grant(input: GrantInput, ctx: RequestContext): Promise<{ created: number }> {
+    const mediaIds = [...new Set(input.mediaIds)];
+    const accountIds = [...new Set(input.accountIds)].filter((a) => a !== input.ownerId);
+    const service = GRANTING_SERVICE[input.purpose];
+    return this.d.uow.transaction(async (s) => {
+      const found = new Map((await s.lockForGrant(mediaIds)).map((m) => [m.id, m]));
+      const problems: Array<{ mediaId: string; problem: GrantProblem }> = [];
+      for (const id of mediaIds) {
+        const problem = grantProblem(found.get(id) ?? null, input.ownerId, input.purpose);
+        if (problem) problems.push({ mediaId: id, problem });
+      }
+      if (problems.length > 0) {
+        throw new AppError('BUSINESS_RULE_VIOLATION', 'Some media cannot be shared.', {
+          rule: 'MEDIA_NOT_GRANTABLE',
+          problems,
+        });
+      }
+      const created = await s.insertGrants(
+        mediaIds.flatMap((mediaId) =>
+          accountIds.map((accountId) => ({ mediaId, accountId, grantedByService: service })),
+        ),
+      );
+      const byMedia = new Map<string, string[]>();
+      for (const g of created)
+        byMedia.set(g.mediaId, [...(byMedia.get(g.mediaId) ?? []), g.accountId]);
+      for (const [mediaId, accounts] of byMedia) {
+        await s.audit(ctx, {
+          action: 'media.access_granted',
+          actorType: 'SYSTEM',
+          targetType: 'media',
+          targetId: mediaId,
+          metadata: { purpose: input.purpose, grantedBy: service, accountIds: accounts },
+        });
+      }
+      return { created: created.length };
+    });
   }
 
   /** Job: abandon uploads never completed in time and remove whatever bytes they left. */

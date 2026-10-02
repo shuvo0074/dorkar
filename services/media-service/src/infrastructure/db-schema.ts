@@ -31,4 +31,10 @@ export interface MediaDB extends KernelTables {
     expires_at: Date | null;
     version: Generated<number>;
   };
+  media_grants: {
+    media_id: string;
+    account_id: string;
+    granted_by_service: string;
+    created_at: Generated<Date>;
+  };
 }

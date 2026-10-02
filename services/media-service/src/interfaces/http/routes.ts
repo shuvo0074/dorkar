@@ -3,7 +3,13 @@ import { ok, type FastifyPluginAsyncZod, type ServiceRuntime } from '@dorkar/ker
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type { MediaService, MediaView } from '../../application/media-service';
-import { MediaStatuses, UploadContentTypes } from '../../domain/media';
+import {
+  GrantablePurposes,
+  MAX_GRANT_ACCOUNTS,
+  MAX_GRANT_MEDIA,
+  MediaStatuses,
+  UploadContentTypes,
+} from '../../domain/media';
 import { errors, iso } from './schemas';
 
 const MediaDto = z.object({
@@ -56,6 +62,13 @@ const UploadCreated = z.object({
 });
 
 const IdParams = z.strictObject({ id: z.uuid() });
+
+const GrantBody = z.strictObject({
+  ownerId: z.uuid(),
+  mediaIds: z.array(z.uuid()).min(1).max(MAX_GRANT_MEDIA),
+  accountIds: z.array(z.uuid()).min(1).max(MAX_GRANT_ACCOUNTS),
+  purpose: z.enum(GrantablePurposes),
+});
 
 export interface MediaRouteDeps {
   media: MediaService;
@@ -147,5 +160,22 @@ export const mediaRoutes: FastifyPluginAsyncZod<MediaRouteDeps> = async (
       await media.delete(req.params.id, req.ctx);
       return reply.status(204).send(null);
     },
+  );
+
+  // ---------------------------------------------------------------- internal
+
+  // Messaging and dispute services share a message's / evidence's media with the other
+  // participants of a conversation or case.
+  app.post(
+    '/internal/v1/media/grants',
+    {
+      preHandler: runtime.internalOnly,
+      schema: {
+        hide: true,
+        body: GrantBody,
+        response: { 200: z.object({ data: z.object({ created: z.number().int() }) }), ...errors },
+      },
+    },
+    async (req) => ok(await media.grant(req.body, req.ctx)),
   );
 };
