@@ -35,6 +35,7 @@ w(`  JWKS_URL: ${svcUrl('identity')}/.well-known/jwks.json`);
 w(`  VERIFICATION_URL: ${svcUrl('verification')}`);
 w(`  PROFILE_URL: ${svcUrl('profile')}`);
 w(`  IDENTITY_URL: ${svcUrl('identity')}`);
+w(`  MEDIA_URL: ${svcUrl('media')}`);
 w();
 w('services:');
 w('  postgres:');
@@ -92,6 +93,8 @@ for (const [name, s] of Object.entries(SERVICES)) {
   if (name === 'notification') {
     w('      SMS_PROVIDER: file');
     w('      SMS_FILE_PATH: /tmp/notification-sms.log');
+    w('      PUSH_PROVIDER: file');
+    w('      PUSH_FILE_PATH: /tmp/notification-push.log');
   }
   w(`    expose: ['${s.port}']`);
 }

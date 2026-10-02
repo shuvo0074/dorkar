@@ -76,6 +76,9 @@ const toSeller = (r: Selectable<MatchingDB['sellers']>): SellerCandidate => ({
 
 const deliversSql = (column: string) => sql<SqlBool>`'SELLER_DELIVERY' = any(${sql.ref(column)})`;
 
+/** One cluster-wide lock key for matching work (transaction-scoped; released at commit). */
+const MATCHING_LOCK = sql`hashtext('matching.candidates')`;
+
 export function pgMatchingStore(db: Executor): MatchingStore {
   const listingsWithParent = () =>
     db
@@ -92,6 +95,9 @@ export function pgMatchingStore(db: Executor): MatchingStore {
       .select('c.parent_id as category_parent_id');
 
   return {
+    async lockMatching() {
+      await sql`select pg_advisory_xact_lock(${MATCHING_LOCK})`.execute(db);
+    },
     // ---------------------------------------------------------------- projections
     async upsertCategory(c) {
       const row = { parent_id: c.parentId, modes: c.modes, active: c.active };

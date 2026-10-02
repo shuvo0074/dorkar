@@ -23,6 +23,7 @@ x-env: &env
   VERIFICATION_URL: http://verification:4003
   PROFILE_URL: http://profile:4002
   IDENTITY_URL: http://identity:4001
+  MEDIA_URL: http://media:4006
 
 services:
   postgres:
@@ -233,6 +234,8 @@ services:
       DATABASE_SCHEMA: notification
       SMS_PROVIDER: file
       SMS_FILE_PATH: /tmp/notification-sms.log
+      PUSH_PROVIDER: file
+      PUSH_FILE_PATH: /tmp/notification-push.log
     expose: ['4012']
 
   bidding:

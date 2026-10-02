@@ -66,6 +66,7 @@ export function serviceEnv(name, dev) {
     VERIFICATION_URL: url(SERVICES.verification.port),
     PROFILE_URL: url(SERVICES.profile.port),
     IDENTITY_URL: url(SERVICES.identity.port),
+    MEDIA_URL: url(SERVICES.media.port),
   };
   switch (name) {
     case 'identity':
@@ -92,6 +93,8 @@ export function serviceEnv(name, dev) {
         ...common,
         SMS_PROVIDER: 'file',
         SMS_FILE_PATH: resolve(ROOT, 'var/notification-sms.log'),
+        PUSH_PROVIDER: 'file',
+        PUSH_FILE_PATH: resolve(ROOT, 'var/dev-push.log'),
       };
     default:
       return common;

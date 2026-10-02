@@ -237,11 +237,13 @@ export class MatchingService {
     publishedAt: string | null,
     ctx: EventCtx,
   ): Promise<void> {
+    await s.lockMatching();
     await s.upsertNeed(facts, publishedAt);
     await this.matchNeed(s, facts.needId, ctx);
   }
 
   async onListingPublished(s: MatchingStore, facts: ListingFacts, ctx: EventCtx): Promise<void> {
+    await s.lockMatching();
     await s.upsertListing(facts);
     const listing = await s.listing(facts.listingId);
     if (listing) await this.matchCandidate(s, listing, ctx);
@@ -252,6 +254,7 @@ export class MatchingService {
     caps: Parameters<MatchingStore['upsertSeller']>[0],
     ctx: EventCtx,
   ): Promise<void> {
+    await s.lockMatching();
     await s.upsertSeller(caps);
     const seller = await s.seller(caps.accountId);
     if (seller?.active) await this.matchCandidate(s, seller, ctx);

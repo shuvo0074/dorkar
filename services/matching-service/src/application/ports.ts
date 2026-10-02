@@ -109,6 +109,11 @@ export interface OpenNeedQuery {
 
 /** Everything the use cases need from storage, bound to one executor (autocommit or a transaction). */
 export interface MatchingStore {
+  /**
+   * Serializes candidate matching in this transaction. A need and a new seller/listing arriving
+   * at the same moment on different streams would otherwise each miss the other's uncommitted row.
+   */
+  lockMatching(): Promise<void>;
   // ---- projections
   upsertCategory(c: CategoryRecord): Promise<void>;
   /** `publishedAt` set: the need (re)became OPEN; otherwise facts only, status kept. */

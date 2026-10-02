@@ -306,6 +306,32 @@ describe('reverse matching', () => {
     expect(await matchFound(needId)).toHaveLength(1); // the seller was announced once
   });
 
+  it('matches a need and a seller/listing that arrive at the same moment on different streams', async () => {
+    for (let round = 0; round < 5; round++) {
+      const cat = await category();
+      const seller = randomUUID();
+      const n = needPayload(randomUUID(), cat);
+      const l = listingPayload(seller, cat);
+      await Promise.all([
+        deliver(envelope(DemandEvents.NeedPublished, n)),
+        deliver(
+          envelope(ProfileEvents.SellerCapabilitiesChanged, {
+            accountId: seller,
+            roles: ['SELLER'],
+            categoryIds: [cat],
+            serviceDistricts: ['dhaka'],
+            deliveryModes: ['BUYER_PICKUP'],
+            active: true,
+          }),
+        ),
+        deliver(envelope(CatalogEvents.ListingPublished, l)),
+      ]);
+      const rows = await matchRows(n.needId);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ seller_id: seller, listing_id: l.listingId });
+    }
+  });
+
   it('ignores listings that became unavailable', async () => {
     const cat = await category();
     const shop = randomUUID();
