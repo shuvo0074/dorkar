@@ -48,6 +48,7 @@ const AuctionRoute = lazy(() => import('../routes/AuctionRoute'));
 const AuctionFormRoute = lazy(() => import('../routes/AuctionFormRoute'));
 const MyAuctionsRoute = lazy(() => import('../routes/MyAuctionsRoute'));
 const ModerationRoute = lazy(() => import('../routes/desk/ModerationRoute'));
+const DisputeQueueRoute = lazy(() => import('../routes/desk/DisputeQueueRoute'));
 
 export const routes = [
   {
@@ -97,6 +98,7 @@ export const routes = [
       { path: 'my/auctions', element: <MyAuctionsRoute /> },
       { path: 'desk/moderation', element: <ModerationRoute /> },
       { path: 'desk/moderation/:id', element: <ModerationRoute /> },
+      { path: 'desk/disputes', element: <DisputeQueueRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

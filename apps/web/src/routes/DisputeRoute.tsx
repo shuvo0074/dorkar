@@ -7,6 +7,7 @@ import { LedgerSkeleton, LoadError, SignedInOnly } from '../components/ui/Status
 import { useSession } from '../features/auth/session';
 import { dealCode } from '../features/deals/api';
 import { disputesApi, type DisputeDetail, type Entry } from '../features/disputes/api';
+import { StaffPanel } from '../features/disputes/StaffPanel';
 import { MediaImage, PhotoPicker } from '../features/media/Photos';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
@@ -102,6 +103,7 @@ function DisputePage({ d }: { d: DisputeDetail }) {
             <ScalesGlyph />
           </div>
           <PartyActions d={d} />
+          <StaffPanel d={d} />
         </div>
       </aside>
 

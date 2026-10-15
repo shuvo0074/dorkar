@@ -83,3 +83,53 @@ describe('the desk for moderators', () => {
     );
   });
 });
+
+describe('disputes on the desk', () => {
+  it('lets an admin resolve a dispute with a note', async () => {
+    const { dispute, DISPUTE } = await import('./fixtures');
+    const staffInfo = {
+      assignedTo: null,
+      assignedAt: null,
+      escalated: false,
+      escalatedAt: null,
+      resolvedBy: null,
+      withdrawnBy: null,
+    };
+    const staffView = dispute({
+      viewerRole: 'STAFF',
+      actions: ['evidence', 'assign', 'note', 'request-info', 'resolve'],
+      staff: staffInfo,
+    });
+    const { calls } = fakeApi({
+      ...signedIn(['ADMIN']),
+      'GET /api/v1/admin/disputes': () => ({
+        body: { data: [{ ...staffView, ...staffInfo }], page: { nextCursor: null } },
+      }),
+      [`GET /api/v1/disputes/${DISPUTE}`]: () => ({ body: { data: staffView } }),
+      [`POST /api/v1/admin/disputes/${DISPUTE}/resolve`]: () => ({
+        body: {
+          data: { ...staffView, status: 'RESOLVED', resolution: 'CANCEL', actions: ['note'] },
+        },
+      }),
+    });
+    renderApp('/desk/disputes');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('link', { name: 'Not returned' }));
+    await user.click(await screen.findByRole('button', { name: 'Decide the case' }));
+    await user.selectOptions(screen.getByLabelText('Outcome'), 'CANCEL');
+    await user.type(
+      screen.getByLabelText(/Decision, as the parties/),
+      'The item was not returned; deal cancelled.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Resolve' }));
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.key === `POST /api/v1/admin/disputes/${DISPUTE}/resolve`)?.body,
+      ).toEqual({
+        resolution: 'CANCEL',
+        note: 'The item was not returned; deal cancelled.',
+      }),
+    );
+    expect(await screen.findByText('Deal cancelled')).toBeInTheDocument();
+  });
+});
