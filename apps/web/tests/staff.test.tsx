@@ -133,3 +133,47 @@ describe('disputes on the desk', () => {
     expect(await screen.findByText('Deal cancelled')).toBeInTheDocument();
   });
 });
+
+describe('ID checks', () => {
+  it('verifies a pending NID with a note', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(['ADMIN']),
+      'GET /api/v1/admin/verifications': () => ({
+        body: {
+          data: [
+            {
+              id: 'v1',
+              accountId: OTHER,
+              kind: 'NID',
+              status: 'PENDING',
+              provider: 'manual',
+              providerRef: null,
+              nidLast4: '4321',
+              reviewedBy: null,
+              reviewNote: null,
+              submittedAt: '2026-10-15T08:00:00.000Z',
+              verifiedAt: null,
+              updatedAt: '2026-10-15T08:00:00.000Z',
+              version: 1,
+            },
+          ],
+          page: { nextCursor: null },
+        },
+      }),
+      'POST /api/v1/admin/verifications/v1/decision': () => ({ body: { data: {} } }),
+    });
+    renderApp('/desk/verifications');
+    const user = userEvent.setup();
+    expect(await screen.findByText('4321')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Note'), 'Matches the EC record');
+    await user.click(screen.getByRole('button', { name: 'Verify' }));
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.key === 'POST /api/v1/admin/verifications/v1/decision')?.body,
+      ).toEqual({
+        decision: 'VERIFIED',
+        note: 'Matches the EC record',
+      }),
+    );
+  });
+});

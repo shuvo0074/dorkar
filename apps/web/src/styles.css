@@ -2575,3 +2575,12 @@ p {
   flex-wrap: wrap;
   gap: 8px;
 }
+.verlist li {
+  align-items: start;
+}
+.verlist__decide {
+  display: grid;
+  gap: 10px;
+  max-width: 480px;
+  margin-top: 10px;
+}
