@@ -2567,3 +2567,11 @@ p {
 .home__browse {
   margin-top: 28px;
 }
+
+/* ---------- staff desk tools ---------- */
+
+.desk__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

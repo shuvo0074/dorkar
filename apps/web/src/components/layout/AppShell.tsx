@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { useCan } from '../../features/auth/permissions';
+import { useIsStaff } from '../../features/desk/tools';
 import { useSession } from '../../features/auth/session';
 import { useUnread } from '../../features/notifications/useUnread';
 import { useI18n } from '../../lib/i18n';
@@ -10,7 +10,7 @@ import { CatalogIcon, InboxIcon, InkDefs, PenIcon, PersonIcon, TallyIcon } from 
 export function AppShell() {
   const { t, lang, setLang, num } = useI18n();
   const { status } = useSession();
-  const can = useCan();
+  const isStaff = useIsStaff();
   const unread = useUnread();
   const signedIn = status === 'signedIn';
   const count = unread > 0 && (
@@ -89,7 +89,7 @@ export function AppShell() {
             )}
             {signedIn && <NavLink to="/messages">{t('nav.messages')}</NavLink>}
             {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
-            {signedIn && can('dashboard:read') && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
+            {signedIn && isStaff && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
             <NavLink to={accountTo}>{accountLabel}</NavLink>
             {toggle}
           </nav>

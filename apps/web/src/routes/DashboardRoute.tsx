@@ -4,7 +4,7 @@ import { Link } from 'react-router';
 import { CrateGlyph, GavelGlyph, KeyGlyph, ScalesGlyph } from '../components/glyphs/glyphs';
 import { Biro } from '../components/ui/Biro';
 import { LedgerSkeleton, LoadError, SignedInOnly } from '../components/ui/Status';
-import { useCan } from '../features/auth/permissions';
+import { useIsStaff } from '../features/desk/tools';
 import { dashboardApi, type PersonalDashboard } from '../features/dashboard/api';
 import { shortCode, useFormat } from '../features/dashboard/format';
 import { useI18n } from '../lib/i18n';
@@ -24,7 +24,7 @@ export default function DashboardRoute() {
 
 function Dashboard() {
   const { t } = useI18n();
-  const can = useCan();
+  const isStaff = useIsStaff();
   const dash = useQuery({ queryKey: ['me', 'dashboard'], queryFn: dashboardApi.personal });
 
   return (
@@ -57,7 +57,7 @@ function Dashboard() {
           <Link className="btn btn--outline btn--small" to="/disputes">
             {t('dash.disputes')}
           </Link>
-          {can('dashboard:read') && (
+          {isStaff && (
             <Link className="btn btn--outline btn--small" to="/desk">
               {t('dash.staffLink')}
             </Link>

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Link } from 'react-router';
 import { LedgerSkeleton, LoadError, SignedInOnly, StaffOnly } from '../components/ui/Status';
 import { useCan } from '../features/auth/permissions';
+import { DeskToolLinks, useIsStaff } from '../features/desk/tools';
 import {
   dashboardApi,
   Metrics,
@@ -45,13 +45,24 @@ export default function DeskRoute() {
 function Desk() {
   const { t, date } = useI18n();
   const can = useCan();
+  const isStaff = useIsStaff();
   const summary = useQuery({
     queryKey: ['me', 'desk', 'summary'],
     queryFn: dashboardApi.summary,
     enabled: can('dashboard:read'),
     refetchInterval: 60_000,
   });
-  if (!can('dashboard:read')) return <StaffOnly />;
+  if (!can('dashboard:read'))
+    return isStaff ? (
+      <div className="desk">
+        <header className="desk__head">
+          <h1 tabIndex={-1}>{t('desk.title')}</h1>
+          <DeskToolLinks />
+        </header>
+      </div>
+    ) : (
+      <StaffOnly />
+    );
 
   return (
     <div className="desk">
@@ -72,12 +83,8 @@ function Desk() {
           >
             {t('desk.refresh')}
           </button>
-          {can('audit:read') && (
-            <Link className="btn btn--outline btn--small" to="/desk/activity">
-              {t('desk.activityLink')}
-            </Link>
-          )}
         </div>
+        <DeskToolLinks />
       </header>
 
       {summary.isPending && <LedgerSkeleton rows={4} />}
