@@ -13,11 +13,11 @@ import {
   type Need,
   type NeedCommand,
 } from '../features/needs/api';
-import { modeLetter } from '../features/needs/modes';
+import { modeLetter, needCode } from '../features/needs/modes';
 import { NeedTermsList } from '../features/needs/NeedTerms';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
-import { shortCode, useFormat } from '../lib/format';
+import { useFormat } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import NotFoundRoute from './NotFoundRoute';
 
@@ -28,10 +28,6 @@ export default function NeedRoute() {
   if (need.error instanceof ApiError && need.error.status === 404) return <NotFoundRoute />;
   if (need.isError) return <LoadError onRetry={() => void need.refetch()} />;
   return <NeedPage need={need.data} />;
-}
-
-export function needCode(n: Pick<Need, 'id' | 'mode'>) {
-  return shortCode(modeLetter[n.mode], n.id);
 }
 
 function NeedPage({ need }: { need: Need }) {

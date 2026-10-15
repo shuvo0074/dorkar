@@ -159,3 +159,22 @@ describe('browsing needs', () => {
     expect(screen.queryByText('What needs look like')).not.toBeInTheDocument();
   });
 });
+
+describe('your needs', () => {
+  it('lists the member’s needs and filters by state', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      'GET /api/v1/me/needs': () => ({
+        body: { data: [need({ offerCount: 3 })], page: { nextCursor: null } },
+      }),
+    });
+    renderApp('/my/needs');
+    const user = userEvent.setup();
+    expect(await screen.findByRole('link', { name: 'Used iPhone 15 Pro, 256GB' })).toBeVisible();
+    expect(screen.getByText(/3 offers/)).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'Draft' }));
+    await waitFor(() =>
+      expect(calls.some((c) => c.key.includes('/api/v1/me/needs?status=DRAFT'))).toBe(true),
+    );
+  });
+});

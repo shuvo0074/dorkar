@@ -32,13 +32,16 @@ function Dashboard() {
       <header className="desk__head">
         <h1 tabIndex={-1}>{t('dash.title')}</h1>
         <p className="desk__lede">{t('dash.lede')}</p>
-        {can('dashboard:read') && (
-          <div className="desk__meta">
+        <nav className="desk__meta shortcuts" aria-label={t('dash.shortcuts')}>
+          <Link className="btn btn--outline btn--small" to="/my/needs">
+            {t('myNeeds.title')}
+          </Link>
+          {can('dashboard:read') && (
             <Link className="btn btn--outline btn--small" to="/desk">
               {t('dash.staffLink')}
             </Link>
-          </div>
-        )}
+          )}
+        </nav>
       </header>
 
       {dash.isPending && <LedgerSkeleton rows={4} />}

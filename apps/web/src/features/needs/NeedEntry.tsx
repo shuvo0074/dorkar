@@ -8,10 +8,10 @@ import {
   LadderGlyph,
   PersonGlyph,
 } from '../../components/glyphs/glyphs';
-import { shortCode, useFormat } from '../../lib/format';
+import { useFormat } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import type { Money } from '../../lib/money';
-import { modeLetter } from './modes';
+import { needCode } from './modes';
 
 /** Until categories carry their own etchings, each mode has one stamp. */
 export const modeGlyph: Record<NeedMode, () => ReactNode> = {
@@ -49,7 +49,7 @@ export function NeedEntry({ need }: { need: EntryNeed }) {
         <div className="entry__art">
           <Glyph />
         </div>
-        <span className="entry__code code">{shortCode(modeLetter[need.mode], need.id)}</span>
+        <span className="entry__code code">{needCode(need)}</span>
         <span className="entry__title">{need.title}</span>
         <span className="entry__meta">{meta}</span>
       </Link>
