@@ -19,6 +19,7 @@ import {
 } from '../features/deals/api';
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
+import { DealReviews } from '../features/trust/DealReviews';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
 import { useFormat } from '../lib/format';
@@ -164,6 +165,8 @@ function DealPage({ deal }: { deal: DealDetail }) {
           <Actions deal={deal} />
         </div>
       </aside>
+
+      {deal.state === 'COMPLETED' && role && <DealReviews transactionId={deal.id} />}
 
       <section className="item__wide" aria-labelledby="deal-timeline">
         <div className="section-head">

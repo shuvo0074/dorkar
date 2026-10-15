@@ -95,3 +95,32 @@ describe('deals', () => {
     );
   });
 });
+
+describe('reviews', () => {
+  it('lets a party rate a completed deal', async () => {
+    const { calls } = fakeApi({
+      ...base,
+      [`GET /api/v1/transactions/${DEAL}`]: () => ({
+        body: { data: deal({ state: 'COMPLETED', actions: [] }) },
+      }),
+      [`GET /api/v1/transactions/${DEAL}/reviews`]: () => ({ body: { data: [] } }),
+      [`POST /api/v1/transactions/${DEAL}/reviews`]: () => ({ status: 201, body: { data: {} } }),
+    });
+    renderApp(`/deals/${DEAL}`);
+    const user = userEvent.setup();
+    expect(await screen.findByText('This deal is finished.')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Post review' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a rating first.');
+    await user.click(screen.getByRole('radio', { name: '4' }));
+    await user.type(screen.getByLabelText(/A few words/), 'Smooth handover');
+    await user.click(screen.getByRole('button', { name: 'Post review' }));
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.key === `POST /api/v1/transactions/${DEAL}/reviews`)?.body,
+      ).toEqual({
+        rating: 4,
+        comment: 'Smooth handover',
+      }),
+    );
+  });
+});

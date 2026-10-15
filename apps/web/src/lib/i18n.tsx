@@ -11,6 +11,7 @@ import { market } from './messages/market';
 import { needs } from './messages/needs';
 import { offers } from './messages/offers';
 import { deals } from './messages/deals';
+import { trust } from './messages/trust';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -670,6 +671,7 @@ const en = {
   ...needs.en,
   ...offers.en,
   ...deals.en,
+  ...trust.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
@@ -679,6 +681,7 @@ const bn: Table = {
   ...needs.bn,
   ...offers.bn,
   ...deals.bn,
+  ...trust.bn,
 };
 
 export type Lang = 'en' | 'bn';
