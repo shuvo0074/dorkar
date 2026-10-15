@@ -35,6 +35,9 @@ const MessagesRoute = lazy(() => import('../routes/MessagesRoute'));
 const ConversationRoute = lazy(() => import('../routes/ConversationRoute'));
 const DisputesRoute = lazy(() => import('../routes/DisputesRoute'));
 const DisputeRoute = lazy(() => import('../routes/DisputeRoute'));
+const BookingsRoute = lazy(() => import('../routes/BookingsRoute'));
+const BookingRoute = lazy(() => import('../routes/BookingRoute'));
+const RentalSettingsRoute = lazy(() => import('../routes/RentalSettingsRoute'));
 
 export const routes = [
   {
@@ -69,6 +72,9 @@ export const routes = [
       { path: 'messages/:id', element: <ConversationRoute /> },
       { path: 'disputes', element: <DisputesRoute /> },
       { path: 'disputes/:id', element: <DisputeRoute /> },
+      { path: 'bookings', element: <BookingsRoute /> },
+      { path: 'bookings/:id', element: <BookingRoute /> },
+      { path: 'listings/:id/rental', element: <RentalSettingsRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

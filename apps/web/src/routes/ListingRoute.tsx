@@ -18,6 +18,7 @@ import { kindGlyph, listingCode, usePrice } from '../features/catalog/ListingEnt
 import { dealsApi } from '../features/deals/api';
 import { MediaImage } from '../features/media/Photos';
 import { MessageButton } from '../features/messages/MessageButton';
+import { RentPanel } from '../features/rentals/RentPanel';
 import { ReportButton } from '../features/trust/ReportButton';
 import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
@@ -167,8 +168,10 @@ function ListingPage({ listing }: { listing: Listing }) {
               to="/sign-in"
               state={{ from: `/listings/${listing.id}` }}
             >
-              {t('listing.signInToBuy')}
+              {t(listing.kind === 'RENTAL' ? 'rent.signIn' : 'listing.signInToBuy')}
             </Link>
+          ) : listing.kind === 'RENTAL' ? (
+            <RentPanel listing={listing} />
           ) : (
             <BuyPanel listing={listing} />
           )}
@@ -267,6 +270,11 @@ function OwnerControls({ listing }: { listing: Listing }) {
       {listingEditable(listing.status) && (
         <Link className="btn btn--outline btn--small" to={`/listings/${listing.id}/edit`}>
           {t('common.edit')}
+        </Link>
+      )}
+      {listing.kind === 'RENTAL' && (
+        <Link className="btn btn--outline btn--small" to={`/listings/${listing.id}/rental`}>
+          {t('rterms.title')}
         </Link>
       )}
       {commands
