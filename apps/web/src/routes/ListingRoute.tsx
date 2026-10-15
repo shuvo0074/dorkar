@@ -17,6 +17,7 @@ import { useCategories } from '../features/catalog/categories';
 import { kindGlyph, listingCode, usePrice } from '../features/catalog/ListingEntry';
 import { dealsApi } from '../features/deals/api';
 import { MediaImage } from '../features/media/Photos';
+import { MessageButton } from '../features/messages/MessageButton';
 import { ReportButton } from '../features/trust/ReportButton';
 import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
@@ -170,6 +171,13 @@ function ListingPage({ listing }: { listing: Listing }) {
             </Link>
           ) : (
             <BuyPanel listing={listing} />
+          )}
+          {!mine && session.status === 'signedIn' && (
+            <MessageButton
+              contextType="LISTING"
+              contextId={listing.id}
+              label={t('chat.messageSeller')}
+            />
           )}
         </div>
         {!mine && <ReportButton targetType="LISTING" targetId={listing.id} />}

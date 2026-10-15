@@ -11,6 +11,7 @@ import { useSession } from '../features/auth/session';
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { offersApi, type OfferAction, type OfferDetail } from '../features/offers/api';
+import { MessageButton } from '../features/messages/MessageButton';
 import { OfferTermsList } from '../features/offers/OfferTerms';
 import { ReportButton } from '../features/trust/ReportButton';
 import { UserLink } from '../features/trust/UserLink';
@@ -164,6 +165,11 @@ function OfferPage({ offer }: { offer: OfferDetail }) {
             <p className="muted">{t('offer.expires', { when: date(offer.expiresAt) })}</p>
           )}
           <Actions offer={offer} onAccepted={() => setAccepted(true)} />
+          <MessageButton
+            contextType="OFFER"
+            contextId={offer.id}
+            label={t(role === 'BUYER' ? 'chat.messageSeller' : 'chat.messageBuyer')}
+          />
         </div>
         {role === 'BUYER' && <ReportButton targetType="OFFER" targetId={offer.id} />}
       </aside>

@@ -17,6 +17,7 @@ import {
   type DealDetail,
   type DisputeReason,
 } from '../features/deals/api';
+import { MessageButton } from '../features/messages/MessageButton';
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { DealReviews } from '../features/trust/DealReviews';
@@ -169,6 +170,13 @@ function DealPage({ deal }: { deal: DealDetail }) {
       <aside className="item__side" aria-label={t('need.details')}>
         <div className="panel">
           <Actions deal={deal} />
+          {role && (
+            <MessageButton
+              contextType="TRANSACTION"
+              contextId={deal.id}
+              label={t(role === 'BUYER' ? 'chat.messageSeller' : 'chat.messageBuyer')}
+            />
+          )}
         </div>
       </aside>
 

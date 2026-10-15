@@ -31,6 +31,8 @@ const MyListingsRoute = lazy(() => import('../routes/MyListingsRoute'));
 const InboxRoute = lazy(() => import('../routes/InboxRoute'));
 const NotificationSettingsRoute = lazy(() => import('../routes/NotificationSettingsRoute'));
 const ProfileSettingsRoute = lazy(() => import('../routes/ProfileSettingsRoute'));
+const MessagesRoute = lazy(() => import('../routes/MessagesRoute'));
+const ConversationRoute = lazy(() => import('../routes/ConversationRoute'));
 
 export const routes = [
   {
@@ -61,6 +63,8 @@ export const routes = [
       { path: 'inbox', element: <InboxRoute /> },
       { path: 'account/notifications', element: <NotificationSettingsRoute /> },
       { path: 'account/profile', element: <ProfileSettingsRoute /> },
+      { path: 'messages', element: <MessagesRoute /> },
+      { path: 'messages/:id', element: <ConversationRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

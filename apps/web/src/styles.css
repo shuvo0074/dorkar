@@ -2395,3 +2395,65 @@ p {
   font-size: 1.2rem;
   cursor: pointer;
 }
+
+/* ---------- messages ---------- */
+
+.chat {
+  display: grid;
+  gap: 24px;
+  max-width: 760px;
+  padding-top: clamp(24px, 4vw, 48px);
+}
+.chat h1 {
+  font-size: clamp(2.4rem, 8vw, 4.2rem);
+}
+.chat__log {
+  display: grid;
+  gap: 10px;
+  min-height: 160px;
+  padding-top: 8px;
+  border-top: var(--rule);
+}
+.chat__lines {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chat__line {
+  display: grid;
+  gap: 2px;
+  max-width: 85%;
+  padding: 8px 12px;
+  border: var(--hair);
+  border-radius: var(--r-box);
+}
+.chat__line p {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.chat__line--mine {
+  justify-self: end;
+  border-width: 2px;
+}
+.chat__line--pending {
+  border-style: dashed;
+}
+.chat__who {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.chat__compose {
+  display: grid;
+  gap: 12px;
+}
+.chat__preview {
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ledger li[data-unread] .ledger__title {
+  text-decoration-thickness: 2.5px;
+}

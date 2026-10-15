@@ -85,6 +85,7 @@ export function AppShell() {
                 {count}
               </NavLink>
             )}
+            {signedIn && <NavLink to="/messages">{t('nav.messages')}</NavLink>}
             {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
             {signedIn && can('dashboard:read') && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
             <NavLink to={accountTo}>{accountLabel}</NavLink>
