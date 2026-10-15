@@ -2605,3 +2605,7 @@ p {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.offer__photos {
+  max-width: 520px;
+  margin-bottom: 22px;
+}

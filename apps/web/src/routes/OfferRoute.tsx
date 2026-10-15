@@ -11,6 +11,7 @@ import { useSession } from '../features/auth/session';
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { offersApi, type OfferAction, type OfferDetail } from '../features/offers/api';
+import { MediaImage } from '../features/media/Photos';
 import { MessageButton } from '../features/messages/MessageButton';
 import { OfferTermsList } from '../features/offers/OfferTerms';
 import { ReportButton } from '../features/trust/ReportButton';
@@ -109,6 +110,15 @@ function OfferPage({ offer }: { offer: OfferDetail }) {
           <h2 id="terms-title">{t('need.details')}</h2>
         </div>
         {offer.description && <p className="item__desc">{offer.description}</p>}
+        {offer.attachmentMediaIds.length > 0 && (
+          <ul className="photos__grid offer__photos" aria-label={t('photos.label')}>
+            {offer.attachmentMediaIds.map((m, i) => (
+              <li key={m} className="photos__item">
+                <MediaImage id={m} alt={t('photos.photo', { n: num(i + 1) })} />
+              </li>
+            ))}
+          </ul>
+        )}
         <dl className="facts">
           <div className="facts__row">
             <dt>{t('deal.otherSide')}</dt>

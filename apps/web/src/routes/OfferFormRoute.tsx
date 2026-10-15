@@ -18,6 +18,7 @@ import {
 import { AlertIcon, NoteIcon } from '../components/glyphs/glyphs';
 import { LedgerSkeleton, LoadError, SignedInOnly } from '../components/ui/Status';
 import { useSession } from '../features/auth/session';
+import { PhotoPicker } from '../features/media/Photos';
 import { needsApi, type Need } from '../features/needs/api';
 import { offersApi, type OfferInput } from '../features/offers/api';
 import {
@@ -76,6 +77,7 @@ function OfferForm({ need }: { need: Need }) {
     offerTermsFromNeed(need.mode, need.modeTerms),
   );
   const [message, setMessage] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [expiry, setExpiry] = useState<(typeof EXPIRY)[number]>('72');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
 
@@ -153,6 +155,7 @@ function OfferForm({ need }: { need: Need }) {
       ...(available ? { availabilityFrom: available } : {}),
       modeTerms: mt.value,
       ...(message.trim() ? { description: message.trim() } : {}),
+      ...(photos.length ? { attachmentMediaIds: photos } : {}),
       expiresInHours: Number(expiry),
     });
   };
@@ -263,6 +266,7 @@ function OfferForm({ need }: { need: Need }) {
             maxLength={2000}
             error={errors['message']}
           />
+          <PhotoPicker purpose="OFFER" value={photos} onChange={setPhotos} max={5} />
           <Segmented
             legend={t('offerForm.expires')}
             name="offer-expiry"
