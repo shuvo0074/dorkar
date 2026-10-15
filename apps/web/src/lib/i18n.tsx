@@ -123,6 +123,7 @@ const coreEn = {
   'account.signOutAllConfirm': 'Sign out of all devices?',
   'account.error': 'Couldn’t load your account.',
   'account.retry': 'Try again',
+  'account.settings': 'Settings',
 
   'notFound.title': 'Not in the catalog',
   'notFound.body': 'This page doesn’t exist, or it moved.',
@@ -446,6 +447,7 @@ const coreBn: Record<keyof typeof coreEn, string> = {
   'account.signOutAllConfirm': 'সব ডিভাইস থেকে সাইন আউট করবেন?',
   'account.error': 'অ্যাকাউন্ট লোড করা যায়নি।',
   'account.retry': 'আবার চেষ্টা করুন',
+  'account.settings': 'সেটিং',
 
   'notFound.title': 'ক্যাটালগে নেই',
   'notFound.body': 'এই পাতাটি নেই, অথবা সরানো হয়েছে।',

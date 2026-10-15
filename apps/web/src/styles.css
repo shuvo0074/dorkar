@@ -2325,3 +2325,47 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- settings ---------- */
+
+.prefs caption {
+  margin-bottom: 0;
+  text-align: left;
+}
+.prefs th[scope='row'] {
+  font-weight: 400;
+}
+.prefs td {
+  width: 5.5rem;
+  text-align: center;
+}
+.prefs__check span {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+}
+.prefs__check span::before {
+  width: 20px;
+  height: 20px;
+}
+.prefs__save {
+  align-items: center;
+}
+.account__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+@media (min-width: 900px) {
+  .account > .account__links {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 520px) {
+  .prefs td {
+    width: 3.4rem;
+  }
+  .prefs thead th {
+    font-size: 0.8rem;
+  }
+}

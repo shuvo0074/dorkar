@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 import { LaptopGlyph, PersonGlyph, PhoneGlyph } from '../components/glyphs/glyphs';
 import { Biro } from '../components/ui/Biro';
 import { LedgerSkeleton, LoadError } from '../components/ui/Status';
@@ -57,6 +57,12 @@ export default function AccountRoute() {
           <dd>{date(a.createdAt, 'short')}</dd>
         </dl>
       </section>
+
+      <nav className="account__links" aria-label={t('account.settings')}>
+        <Link className="btn btn--outline btn--small" to="/account/notifications">
+          {t('prefs.title')}
+        </Link>
+      </nav>
 
       <Devices />
       <Sessions />

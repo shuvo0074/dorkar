@@ -72,3 +72,36 @@ describe('inbox', () => {
     );
   });
 });
+
+describe('notification settings', () => {
+  it('saves every type with the channels chosen', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      'GET /api/v1/me/notifications/preferences': () => ({
+        body: {
+          data: [
+            { type: 'OFFER_RECEIVED', inApp: true, sms: true, push: false },
+            { type: 'NEW_MESSAGE', inApp: true, sms: false, push: false },
+          ],
+        },
+      }),
+      'PUT /api/v1/me/notifications/preferences': (body) => ({
+        body: { data: (body as { items: unknown[] }).items },
+      }),
+    });
+    renderApp('/account/notifications');
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole('checkbox', { name: 'An offer arrives on my need: SMS' }),
+    );
+    await user.click(screen.getByRole('checkbox', { name: 'A new message: Phone alert' }));
+    await user.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(await screen.findByText('Settings saved.')).toBeInTheDocument();
+    expect(calls.find((c) => c.key === 'PUT /api/v1/me/notifications/preferences')?.body).toEqual({
+      items: [
+        { type: 'OFFER_RECEIVED', inApp: true, sms: false, push: false },
+        { type: 'NEW_MESSAGE', inApp: true, sms: false, push: true },
+      ],
+    });
+  });
+});
