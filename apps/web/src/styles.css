@@ -2584,3 +2584,24 @@ p {
   max-width: 480px;
   margin-top: 10px;
 }
+.cattree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cattree li {
+  padding: 8px 0;
+  border-bottom: var(--hair);
+}
+.attrrow {
+  margin: 0;
+}
+.attrrow .formactions {
+  align-items: center;
+  justify-content: space-between;
+}
+@media (min-width: 560px) {
+  .pair--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

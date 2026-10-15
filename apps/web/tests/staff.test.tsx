@@ -225,3 +225,42 @@ describe('accounts and content', () => {
     );
   });
 });
+
+describe('categories', () => {
+  it('creates a category with a question', async () => {
+    const { catalogRoutes, ELECTRONICS } = await import('./fixtures');
+    const { calls } = fakeApi({
+      ...signedIn(['ADMIN']),
+      ...catalogRoutes,
+      'POST /api/v1/admin/categories': () => ({ status: 201, body: { data: { id: 'new-cat' } } }),
+    });
+    const { router } = renderApp('/desk/categories/new');
+    const user = userEvent.setup();
+    await screen.findByRole('option', { name: 'Electronics' });
+    await user.selectOptions(screen.getByLabelText('Parent'), ELECTRONICS);
+    await user.type(screen.getByLabelText('Name in English'), 'Laptops');
+    await user.type(screen.getByLabelText('Name in Bangla'), 'ল্যাপটপ');
+    await user.type(screen.getByLabelText(/^Slug/), 'laptops');
+    await user.click(screen.getByRole('button', { name: 'Add a question' }));
+    await user.type(screen.getByLabelText('Key'), 'ramGb');
+    await user.selectOptions(screen.getByLabelText('Answer type'), 'integer');
+    await user.type(screen.getByLabelText('Question (English)'), 'RAM');
+    await user.type(screen.getByLabelText('Question (Bangla)'), 'র‍্যাম');
+    await user.type(screen.getByLabelText('Unit'), 'GB');
+    await user.click(screen.getByRole('button', { name: 'Save category' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/desk/categories/new-cat'));
+    expect(calls.find((c) => c.key === 'POST /api/v1/admin/categories')?.body).toEqual({
+      parentId: ELECTRONICS,
+      slug: 'laptops',
+      nameEn: 'Laptops',
+      nameBn: 'ল্যাপটপ',
+      modes: ['BUY'],
+      attributeSchema: {
+        properties: { ramGb: { type: 'integer', label: { en: 'RAM', bn: 'র‍্যাম' }, unit: 'GB' } },
+        required: [],
+      },
+      sort: 0,
+      active: true,
+    });
+  });
+});
