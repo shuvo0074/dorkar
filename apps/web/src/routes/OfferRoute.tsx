@@ -12,6 +12,7 @@ import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { offersApi, type OfferAction, type OfferDetail } from '../features/offers/api';
 import { OfferTermsList } from '../features/offers/OfferTerms';
+import { ReportButton } from '../features/trust/ReportButton';
 import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
@@ -164,6 +165,7 @@ function OfferPage({ offer }: { offer: OfferDetail }) {
           )}
           <Actions offer={offer} onAccepted={() => setAccepted(true)} />
         </div>
+        {role === 'BUYER' && <ReportButton targetType="OFFER" targetId={offer.id} />}
       </aside>
 
       <section className="item__wide" aria-labelledby="rounds-title">

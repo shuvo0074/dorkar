@@ -4,7 +4,9 @@ import { Biro } from '../components/ui/Biro';
 import { MoreButton, usePaged } from '../components/ui/Paging';
 import { LedgerSkeleton, LoadError } from '../components/ui/Status';
 import { useCategories } from '../features/catalog/categories';
+import { useSession } from '../features/auth/session';
 import { trustApi, type PublicProfile } from '../features/trust/api';
+import { ReportButton } from '../features/trust/ReportButton';
 import { Rating, ReviewItem } from '../features/trust/DealReviews';
 import { useProfile } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
@@ -25,6 +27,7 @@ function Profile({ p }: { p: PublicProfile }) {
   const { t, num, date } = useI18n();
   const f = useFormat();
   const categories = useCategories();
+  const me = useSession().account?.id;
   const rep = p.reputation;
   const verified = p.badges.length > 0;
 
@@ -120,6 +123,7 @@ function Profile({ p }: { p: PublicProfile }) {
       )}
 
       <Reviews userId={p.id} />
+      {me !== p.id && <ReportButton targetType="USER" targetId={p.id} />}
     </article>
   );
 }

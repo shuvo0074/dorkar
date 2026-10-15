@@ -178,3 +178,29 @@ describe('your needs', () => {
     );
   });
 });
+
+describe('reporting', () => {
+  it('lets a member report someone else’s need', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      ...catalogRoutes,
+      [`GET /api/v1/needs/${NEED}`]: () => ({ body: { data: need({ requesterId: OTHER }) } }),
+      'POST /api/v1/reports': () => ({
+        status: 201,
+        body: { data: { reportId: 'r', caseId: 'c' } },
+      }),
+    });
+    renderApp(`/needs/${NEED}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Report' }));
+    await user.selectOptions(screen.getByLabelText('What’s wrong'), 'SPAM');
+    await user.click(screen.getByRole('button', { name: 'Send report' }));
+    expect(await screen.findByText(/moderators will look at it/)).toBeInTheDocument();
+    expect(calls.find((c) => c.key === 'POST /api/v1/reports')?.body).toEqual({
+      targetType: 'NEED',
+      targetId: NEED,
+      reason: 'SPAM',
+      details: null,
+    });
+  });
+});

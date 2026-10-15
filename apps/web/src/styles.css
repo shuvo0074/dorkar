@@ -2124,3 +2124,10 @@ p {
     grid-column: 1 / -1;
   }
 }
+.report {
+  margin-top: 14px;
+  font-size: 0.92rem;
+}
+.report h3 {
+  font-size: 1.4rem;
+}

@@ -16,6 +16,7 @@ import {
 import { modeLetter, needCode } from '../features/needs/modes';
 import { NeedTermsList } from '../features/needs/NeedTerms';
 import { OfferCompare } from '../features/offers/OfferCompare';
+import { ReportButton } from '../features/trust/ReportButton';
 import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
@@ -171,6 +172,7 @@ function NeedPage({ need }: { need: Need }) {
             </Link>
           )}
         </div>
+        {!mine && <ReportButton targetType="NEED" targetId={need.id} />}
       </aside>
 
       {mine && need.status !== 'DRAFT' && <OfferCompare need={need} />}
