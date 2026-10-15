@@ -17,7 +17,7 @@ const randomPhone = () => `017${String(Math.floor(Math.random() * 1e8)).padStart
 
 test.skip(!SMS_LOG, 'set E2E_SMS_LOG to the identity dev SMS file');
 
-test('post-a-need visitor signs in with phone + code, sees the account, and signs out', async ({
+test('post-a-need visitor signs in, lands on the need form with their words, and signs out', async ({
   page,
 }) => {
   const phone = randomPhone();
@@ -33,8 +33,12 @@ test('post-a-need visitor signs in with phone + code, sees the account, and sign
   await expect(page.getByText(/We sent a code to/)).toBeVisible();
   await page.getByLabel('6-digit code').fill(latestCode(`+880${phone.slice(1)}`));
 
-  await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByText('Welcome to Dorkar. Your account is ready.')).toBeVisible();
+  // Signing in carries the visitor straight on to the need they started, words intact.
+  await expect(page).toHaveURL(/\/needs\/new$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Post a need' })).toBeVisible();
+  await expect(page.getByLabel('Headline')).toHaveValue('Used iPhone 15 Pro, 256GB, Dhaka');
+
+  await page.goto('/account');
   await expect(page.getByText('This browser')).toBeVisible();
 
   // Reload: the session is restored from the httpOnly refresh cookie.
