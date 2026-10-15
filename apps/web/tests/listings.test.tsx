@@ -9,7 +9,10 @@ import {
   DEAL,
   listing,
   LISTING,
+  ME,
+  MEDIA,
   mediaRoutes,
+  PHONES,
   signedIn,
   signedOut,
 } from './fixtures';
@@ -102,5 +105,86 @@ describe('a listing', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This listing just stopped being available.',
     );
+  });
+});
+
+describe('selling', () => {
+  it('creates a listing with category attributes and publishes it', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      ...catalogRoutes,
+      ...mediaRoutes,
+      'POST /api/v1/listings': (body) => ({
+        status: 201,
+        body: { data: listing({ ...(body as object), status: 'DRAFT', sellerId: ME }) },
+      }),
+      [`POST /api/v1/listings/${LISTING}/publish`]: () => ({
+        body: { data: listing({ sellerId: ME }) },
+      }),
+      [`GET /api/v1/listings/${LISTING}`]: () => ({ body: { data: listing({ sellerId: ME }) } }),
+    });
+    const { router } = renderApp('/listings/new');
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Title'), 'iPhone 13, 128GB, blue');
+    await user.selectOptions(await screen.findByLabelText('Category'), PHONES);
+    await user.click(screen.getByRole('button', { name: 'Save and publish' }));
+    // Brand is required by the category, price and district by the API.
+    expect(await screen.findByText('Fix the marked fields, then try again.')).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/^Brand/), 'Apple');
+    await user.type(screen.getByLabelText(/^Price$/), '52000');
+    await user.selectOptions(screen.getByLabelText('District'), 'dhaka');
+    await user.click(screen.getByRole('checkbox', { name: 'Buyer picks up' }));
+    await user.click(screen.getByRole('button', { name: 'Save and publish' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/listings/${LISTING}`));
+    expect(calls.find((c) => c.key === 'POST /api/v1/listings')?.body).toMatchObject({
+      kind: 'PRODUCT',
+      categoryId: PHONES,
+      title: 'iPhone 13, 128GB, blue',
+      price: { amount: 5_200_000, currency: 'BDT' },
+      priceUnit: 'TOTAL',
+      quantityAvailable: 1,
+      attributes: { brand: 'Apple' },
+      district: 'dhaka',
+      deliveryModes: ['BUYER_PICKUP'],
+    });
+    expect(calls.some((c) => c.key === `POST /api/v1/listings/${LISTING}/publish`)).toBe(true);
+    expect(await screen.findByText('This is your listing')).toBeInTheDocument();
+  });
+
+  it('uploads a photo through a signed slot', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      ...catalogRoutes,
+      ...mediaRoutes,
+      'POST /api/v1/media/uploads': () => ({
+        status: 201,
+        body: {
+          data: {
+            mediaId: MEDIA,
+            upload: {
+              method: 'PUT',
+              url: 'http://localhost:4000/api/v1/media/uploads/x/content?sig=1',
+              headers: { 'content-type': 'image/png' },
+            },
+            expiresAt: '2026-10-15T10:15:00.000Z',
+          },
+        },
+      }),
+      'PUT /api/v1/media/uploads/x/content?sig=1': () => ({ status: 204 }),
+      [`POST /api/v1/media/${MEDIA}/complete`]: () => ({
+        body: { data: { id: MEDIA, status: 'READY', urls: {} } },
+      }),
+    });
+    renderApp('/listings/new');
+    const user = userEvent.setup();
+    const file = new File([new Uint8Array(10)], 'phone.png', { type: 'image/png' });
+    await user.upload(await screen.findByLabelText('Add photos'), file);
+    expect(await screen.findByRole('button', { name: 'Remove photo 1' })).toBeVisible();
+    expect(calls.find((c) => c.key === 'POST /api/v1/media/uploads')?.body).toEqual({
+      purpose: 'LISTING',
+      contentType: 'image/png',
+      sizeBytes: 10,
+    });
+    expect(calls.some((c) => c.key.startsWith('PUT /api/v1/media/uploads/x/content'))).toBe(true);
   });
 });

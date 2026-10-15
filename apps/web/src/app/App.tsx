@@ -26,6 +26,8 @@ const DealRoute = lazy(() => import('../routes/DealRoute'));
 const UserRoute = lazy(() => import('../routes/UserRoute'));
 const ListingsRoute = lazy(() => import('../routes/ListingsRoute'));
 const ListingRoute = lazy(() => import('../routes/ListingRoute'));
+const ListingFormRoute = lazy(() => import('../routes/ListingFormRoute'));
+const MyListingsRoute = lazy(() => import('../routes/MyListingsRoute'));
 
 export const routes = [
   {
@@ -49,7 +51,10 @@ export const routes = [
       { path: 'deals/:id', element: <DealRoute /> },
       { path: 'users/:id', element: <UserRoute /> },
       { path: 'listings', element: <ListingsRoute /> },
+      { path: 'listings/new', element: <ListingFormRoute /> },
       { path: 'listings/:id', element: <ListingRoute /> },
+      { path: 'listings/:id/edit', element: <ListingFormRoute /> },
+      { path: 'my/listings', element: <MyListingsRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

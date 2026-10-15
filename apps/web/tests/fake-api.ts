@@ -13,7 +13,7 @@ export function fakeApi(routes: Record<string, Handler>) {
   const calls: Array<{ key: string; body: unknown; headers: Record<string, string> }> = [];
   const fetchMock = vi.fn(async (input: string, init: RequestInit = {}) => {
     const key = `${init.method ?? 'GET'} ${input}`;
-    const body = init.body ? JSON.parse(init.body as string) : undefined;
+    const body = typeof init.body === 'string' ? JSON.parse(init.body) : init.body;
     calls.push({ key, body, headers: (init.headers ?? {}) as Record<string, string> });
     const handler = routes[key] ?? routes[key.split('?')[0]!];
     if (!handler)

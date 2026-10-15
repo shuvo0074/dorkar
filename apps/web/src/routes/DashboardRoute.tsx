@@ -39,6 +39,9 @@ function Dashboard() {
           <Link className="btn btn--outline btn--small" to="/my/offers">
             {t('myOffers.title')}
           </Link>
+          <Link className="btn btn--outline btn--small" to="/my/listings">
+            {t('myListings.title')}
+          </Link>
           <Link className="btn btn--outline btn--small" to="/deals">
             {t('nav.deals')}
           </Link>
