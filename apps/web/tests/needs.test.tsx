@@ -119,3 +119,43 @@ describe('need page', () => {
     expect(screen.getAllByText(/Mirpur, ঢাকা/).length).toBeGreaterThan(0);
   });
 });
+
+describe('browsing needs', () => {
+  it('lists open needs and filters through the URL', async () => {
+    const { calls } = fakeApi({
+      ...signedOut,
+      ...catalogRoutes,
+      'GET /api/v1/needs': () => ({
+        body: { data: [need({ requesterId: OTHER })], page: { nextCursor: null } },
+      }),
+    });
+    const { router } = renderApp('/needs');
+    const user = userEvent.setup();
+    expect(await screen.findByRole('link', { name: /Used iPhone 15 Pro/ })).toHaveAttribute(
+      'href',
+      `/needs/${NEED}`,
+    );
+    await user.click(screen.getByRole('radio', { name: 'Hire' }));
+    await user.selectOptions(screen.getByLabelText('District'), 'sylhet');
+    await user.click(screen.getByRole('button', { name: 'Show needs' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?mode=HIRE&district=sylhet'));
+    await waitFor(() =>
+      expect(calls.some((c) => c.key.includes('/api/v1/needs?mode=HIRE&district=sylhet'))).toBe(
+        true,
+      ),
+    );
+  });
+
+  it('shows real needs on the home page instead of the examples', async () => {
+    fakeApi({
+      ...signedOut,
+      'GET /api/v1/needs': () => ({
+        body: { data: [need({ requesterId: OTHER })], page: { nextCursor: null } },
+      }),
+    });
+    renderApp('/');
+    expect(await screen.findByRole('heading', { name: 'Latest needs' })).toBeVisible();
+    expect(screen.getByText('Used iPhone 15 Pro, 256GB')).toBeInTheDocument();
+    expect(screen.queryByText('What needs look like')).not.toBeInTheDocument();
+  });
+});

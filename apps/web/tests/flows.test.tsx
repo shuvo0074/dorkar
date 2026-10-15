@@ -24,7 +24,7 @@ describe('home', () => {
     expect(screen.getByRole('radiogroup', { name: 'I want to' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /Buy/ })).toHaveAttribute('aria-checked', 'true');
     expect(
-      screen.getByText('Examples only. Real needs appear here when posting opens.'),
+      screen.getByText('Examples only, until the first real needs are posted.'),
     ).toBeInTheDocument();
   });
 

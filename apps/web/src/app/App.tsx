@@ -16,6 +16,7 @@ const ActivityRoute = lazy(() => import('../routes/ActivityRoute'));
 const NotFoundRoute = lazy(() => import('../routes/NotFoundRoute'));
 const NeedFormRoute = lazy(() => import('../routes/NeedFormRoute'));
 const NeedRoute = lazy(() => import('../routes/NeedRoute'));
+const NeedsRoute = lazy(() => import('../routes/NeedsRoute'));
 
 export const routes = [
   {
@@ -27,6 +28,7 @@ export const routes = [
       { path: 'dashboard', element: <DashboardRoute /> },
       { path: 'desk', element: <DeskRoute /> },
       { path: 'desk/activity', element: <ActivityRoute /> },
+      { path: 'needs', element: <NeedsRoute /> },
       { path: 'needs/new', element: <NeedFormRoute /> },
       { path: 'needs/:id', element: <NeedRoute /> },
       { path: 'needs/:id/edit', element: <NeedFormRoute /> },

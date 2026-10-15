@@ -48,7 +48,7 @@ function NeedPage({ need }: { need: Need }) {
     <article className="item">
       <header className="item__head">
         <p className="crumb">
-          <Link to="/">{t('nav.catalog')}</Link>
+          <Link to="/needs">{t('nav.needs')}</Link>
         </p>
         <div className="item__tag">
           <span className="modetile" aria-hidden="true">
