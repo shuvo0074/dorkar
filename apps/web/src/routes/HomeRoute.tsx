@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
+import { BagGlyph, CatalogIcon, GavelGlyph, LadderGlyph } from '../components/glyphs/glyphs';
 import { Biro } from '../components/ui/Biro';
 import { needsApi } from '../features/needs/api';
 import { Composer } from '../features/needs/Composer';
@@ -25,6 +26,34 @@ export default function HomeRoute() {
         </h1>
         <p className="home__lede">{t('home.lede')}</p>
         <Composer />
+        <nav className="home__browse" aria-label={t('home.browseAll')}>
+          <ul className="browselinks">
+            <li>
+              <Link to="/needs">
+                <BagGlyph />
+                {t('feed.title')}
+              </Link>
+            </li>
+            <li>
+              <Link to="/listings">
+                <CatalogIcon />
+                {t('nav.listings')}
+              </Link>
+            </li>
+            <li>
+              <Link to="/lend">
+                <LadderGlyph />
+                {t('nav.lend')}
+              </Link>
+            </li>
+            <li>
+              <Link to="/auctions">
+                <GavelGlyph />
+                {t('nav.auctions')}
+              </Link>
+            </li>
+          </ul>
+        </nav>
       </section>
 
       {real ? (
