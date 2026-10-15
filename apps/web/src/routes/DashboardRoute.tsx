@@ -157,6 +157,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           note={t('dash.auctions.note', { owned: d.auctions.owned, bidding: d.auctions.bidding })}
           rows={d.auctions.live.map((a) => ({
             key: a.auctionId,
+            href: `/auctions/${a.auctionId}`,
             art: <GavelGlyph />,
             title: t('dash.auction', { code: shortCode('A', a.auctionId) }),
             meta: [t(`dash.role.${a.role}`), a.endsAt && t('dash.ends', { when: date(a.endsAt) })],
@@ -171,6 +172,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           note={t('dash.bookings.note', { renter: d.bookings.asRenter, owner: d.bookings.asOwner })}
           rows={d.bookings.items.map((b) => ({
             key: b.bookingId,
+            href: `/bookings/${b.bookingId}`,
             art: <KeyGlyph />,
             title: t('dash.booking', { code: shortCode('R', b.bookingId) }),
             meta: [
@@ -191,6 +193,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           note={t('dash.loans.note', { lender: d.loans.asLender, borrower: d.loans.asBorrower })}
           rows={d.loans.items.map((l) => ({
             key: l.loanId,
+            href: `/loans/${l.loanId}`,
             art: <CrateGlyph />,
             title: t('dash.loan', { code: shortCode('L', l.loanId) }),
             meta: [
@@ -209,6 +212,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           note={t('dash.disputes.note', { n: d.disputes.open })}
           rows={d.disputes.items.map((x) => ({
             key: x.disputeId,
+            href: `/disputes/${x.disputeId}`,
             art: <ScalesGlyph />,
             title: t('dash.dispute', { code: shortCode('T', x.transactionId) }),
             meta: [t(`dash.role.${x.role}`), f.state(x.status)],
@@ -249,7 +253,13 @@ function Ledger({
   id: string;
   title: string;
   note: string;
-  rows: Array<{ key: string; art: ReactNode; title: string; meta: Array<string | null | false> }>;
+  rows: Array<{
+    key: string;
+    href: string;
+    art: ReactNode;
+    title: string;
+    meta: Array<string | null | false>;
+  }>;
 }) {
   const { t } = useI18n();
   return (
@@ -266,7 +276,9 @@ function Ledger({
             <li key={r.key}>
               <span className="ledger__art">{r.art}</span>
               <div>
-                <span className="ledger__title code">{r.title}</span>
+                <Link className="ledger__title code" to={r.href}>
+                  {r.title}
+                </Link>
                 <p className="ledger__meta">{r.meta.filter(Boolean).join(' · ')}</p>
               </div>
             </li>
