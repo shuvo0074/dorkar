@@ -28,6 +28,7 @@ const ListingsRoute = lazy(() => import('../routes/ListingsRoute'));
 const ListingRoute = lazy(() => import('../routes/ListingRoute'));
 const ListingFormRoute = lazy(() => import('../routes/ListingFormRoute'));
 const MyListingsRoute = lazy(() => import('../routes/MyListingsRoute'));
+const InboxRoute = lazy(() => import('../routes/InboxRoute'));
 
 export const routes = [
   {
@@ -55,6 +56,7 @@ export const routes = [
       { path: 'listings/:id', element: <ListingRoute /> },
       { path: 'listings/:id/edit', element: <ListingFormRoute /> },
       { path: 'my/listings', element: <MyListingsRoute /> },
+      { path: 'inbox', element: <InboxRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

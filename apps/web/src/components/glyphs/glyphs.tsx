@@ -283,6 +283,15 @@ export const TallyIcon = () => (
   </Glyph>
 );
 
+/** An envelope: the inbox. */
+export const InboxIcon = () => (
+  <Glyph>
+    <path d="M6 12.5h36v24H6z" />
+    <path d="M6 12.5l18 14 18-14" />
+    <circle className="navdot" cx="38" cy="9" r="3" />
+  </Glyph>
+);
+
 export const AlertIcon = () => (
   <Glyph>
     <path d="M24 5.5 43.5 40H4.5z" stroke="currentColor" />

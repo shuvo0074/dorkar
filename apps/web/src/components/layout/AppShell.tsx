@@ -2,15 +2,23 @@ import { Suspense, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useCan } from '../../features/auth/permissions';
 import { useSession } from '../../features/auth/session';
+import { useUnread } from '../../features/notifications/useUnread';
 import { useI18n } from '../../lib/i18n';
-import { CatalogIcon, InkDefs, PenIcon, PersonIcon, TallyIcon } from '../glyphs/glyphs';
+import { CatalogIcon, InboxIcon, InkDefs, PenIcon, PersonIcon, TallyIcon } from '../glyphs/glyphs';
 
 /** Masthead, navigation (top on wide screens, thumb bar on phones), footer, route focus. */
 export function AppShell() {
-  const { t, lang, setLang } = useI18n();
+  const { t, lang, setLang, num } = useI18n();
   const { status } = useSession();
   const can = useCan();
+  const unread = useUnread();
   const signedIn = status === 'signedIn';
+  const count = unread > 0 && (
+    <span className="navcount" aria-hidden="true">
+      {unread > 99 ? '99+' : num(unread)}
+    </span>
+  );
+  const inboxLabel = unread > 0 ? t('inbox.badge', { n: unread }) : undefined;
   const location = useLocation();
   const lastPath = useRef(location.pathname);
 
@@ -71,6 +79,12 @@ export function AppShell() {
             </NavLink>
             <NavLink to="/needs">{t('nav.needs')}</NavLink>
             <NavLink to="/listings">{t('nav.listings')}</NavLink>
+            {signedIn && (
+              <NavLink to="/inbox" aria-label={inboxLabel}>
+                {t('nav.inbox')}
+                {count}
+              </NavLink>
+            )}
             {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
             {signedIn && can('dashboard:read') && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
             <NavLink to={accountTo}>{accountLabel}</NavLink>
@@ -93,7 +107,7 @@ export function AppShell() {
         </footer>
       </div>
 
-      <nav className={signedIn ? 'bottomnav bottomnav--4' : 'bottomnav'} aria-label={t('nav.main')}>
+      <nav className={signedIn ? 'bottomnav bottomnav--5' : 'bottomnav'} aria-label={t('nav.main')}>
         <NavLink to="/" end>
           <CatalogIcon />
           {t('nav.catalog')}
@@ -109,6 +123,15 @@ export function AppShell() {
           <PenIcon />
           {t('nav.post')}
         </Link>
+        {signedIn && (
+          <NavLink to="/inbox" aria-label={inboxLabel}>
+            <span className="navicon">
+              <InboxIcon />
+              {count}
+            </span>
+            {t('nav.inbox')}
+          </NavLink>
+        )}
         {signedIn && (
           <NavLink to="/dashboard">
             <TallyIcon />

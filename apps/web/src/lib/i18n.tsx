@@ -13,6 +13,7 @@ import { offers } from './messages/offers';
 import { deals } from './messages/deals';
 import { trust } from './messages/trust';
 import { listings } from './messages/listings';
+import { notifications } from './messages/notifications';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -672,6 +673,7 @@ const en = {
   ...deals.en,
   ...trust.en,
   ...listings.en,
+  ...notifications.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
@@ -683,6 +685,7 @@ const bn: Table = {
   ...deals.bn,
   ...trust.bn,
   ...listings.bn,
+  ...notifications.bn,
 };
 
 export type Lang = 'en' | 'bn';
