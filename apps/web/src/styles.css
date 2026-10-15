@@ -2056,3 +2056,11 @@ p {
     justify-content: flex-start;
   }
 }
+.dealstep {
+  display: grid;
+  flex-basis: 100%;
+  gap: 6px;
+}
+.counter--danger {
+  border-color: var(--red-ink);
+}
