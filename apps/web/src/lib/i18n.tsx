@@ -7,13 +7,14 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { market } from './messages/market';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
  * not a partial translation. Keys are typed from the English table, so a missing Bangla string
- * is a compile error.
+ * is a compile error. Each marketplace area keeps its strings in lib/messages/.
  */
-const en = {
+const coreEn = {
   'brand.latin': 'Dorkar',
   'brand.bangla': 'দরকার',
   'brand.tagline': 'Tell us what you need. The market comes to you.',
@@ -338,10 +339,7 @@ const en = {
   'service.dashboard': 'Dashboard',
 } as const;
 
-export type MessageKey = keyof typeof en;
-type Table = Record<MessageKey, string>;
-
-const bn: Table = {
+const coreBn: Record<keyof typeof coreEn, string> = {
   'brand.latin': 'Dorkar',
   'brand.bangla': 'দরকার',
   'brand.tagline': 'কী দরকার, বলুন। বাজার নিজেই আসবে আপনার কাছে।',
@@ -662,6 +660,17 @@ const bn: Table = {
   'service.dispute': 'বিরোধ',
   'service.messaging': 'বার্তা',
   'service.dashboard': 'ড্যাশবোর্ড',
+};
+
+const en = {
+  ...coreEn,
+  ...market.en,
+};
+export type MessageKey = keyof typeof en;
+type Table = Record<MessageKey, string>;
+const bn: Table = {
+  ...coreBn,
+  ...market.bn,
 };
 
 export type Lang = 'en' | 'bn';

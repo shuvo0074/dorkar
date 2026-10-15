@@ -106,7 +106,15 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Attach the access token (default true when signed in). */
   auth?: boolean;
+  /**
+   * Sent as `Idempotency-Key` on commands the API marks (idem). Create one per user intent
+   * (see `intentKey`) and reuse it on retries, so a double tap never makes two offers.
+   */
+  idempotencyKey?: string;
 }
+
+/** A fresh idempotency key for one user intent. */
+export const intentKey = (): string => crypto.randomUUID();
 
 /** Sends with the access token, refreshing once on 401; throws ApiError on failure. */
 async function request(path: string, opts: RequestOptions, accept: string): Promise<Response> {
@@ -117,6 +125,7 @@ async function request(path: string, opts: RequestOptions, accept: string): Prom
     const headers: Record<string, string> = { accept };
     if (opts.body !== undefined) headers['content-type'] = 'application/json';
     if (auth && current) headers['authorization'] = `Bearer ${current.token}`;
+    if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
     return fetch(path, {
       method: opts.method ?? 'GET',
       headers,
