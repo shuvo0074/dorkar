@@ -20,6 +20,7 @@ import {
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { DealReviews } from '../features/trust/DealReviews';
+import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
 import { useFormat } from '../lib/format';
@@ -105,6 +106,11 @@ function DealPage({ deal }: { deal: DealDetail }) {
           <Row label={t('deal.amount')}>{f.taka(deal.amount)}</Row>
           <Row label={t('deal.quantity')}>{num(deal.quantity)}</Row>
           <Row label={t('deal.mode')}>{t(`mode.${deal.mode}`)}</Row>
+          {role && (
+            <Row label={t('deal.otherSide')}>
+              <UserLink userId={role === 'BUYER' ? deal.sellerId : deal.buyerId} />
+            </Row>
+          )}
           <Row label={t('deal.source')}>
             {t(`deal.source.${deal.sourceType}`)}
             {source && (

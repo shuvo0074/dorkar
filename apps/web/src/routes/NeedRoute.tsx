@@ -16,6 +16,7 @@ import {
 import { modeLetter, needCode } from '../features/needs/modes';
 import { NeedTermsList } from '../features/needs/NeedTerms';
 import { OfferCompare } from '../features/offers/OfferCompare';
+import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
 import { useFormat } from '../lib/format';
@@ -84,6 +85,14 @@ function NeedPage({ need }: { need: Need }) {
         </div>
         {need.description && <p className="item__desc">{need.description}</p>}
         <dl className="facts">
+          {!mine && (
+            <div className="facts__row">
+              <dt>{t('need.postedBy')}</dt>
+              <dd>
+                <UserLink userId={need.requesterId} />
+              </dd>
+            </div>
+          )}
           <div className="facts__row">
             <dt>{t('need.mode')}</dt>
             <dd>{t(`mode.${need.mode}`)}</dd>

@@ -2109,3 +2109,18 @@ p {
 .reviewform h3 {
   font-size: 1.5rem;
 }
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.profile__bio {
+  margin-top: 14px;
+  white-space: pre-line;
+}
+@media (min-width: 900px) {
+  .account > .tally,
+  .account > .profile__reviews {
+    grid-column: 1 / -1;
+  }
+}

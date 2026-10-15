@@ -23,6 +23,7 @@ const OfferRoute = lazy(() => import('../routes/OfferRoute'));
 const MyOffersRoute = lazy(() => import('../routes/MyOffersRoute'));
 const DealsRoute = lazy(() => import('../routes/DealsRoute'));
 const DealRoute = lazy(() => import('../routes/DealRoute'));
+const UserRoute = lazy(() => import('../routes/UserRoute'));
 
 export const routes = [
   {
@@ -44,6 +45,7 @@ export const routes = [
       { path: 'my/offers', element: <MyOffersRoute /> },
       { path: 'deals', element: <DealsRoute /> },
       { path: 'deals/:id', element: <DealRoute /> },
+      { path: 'users/:id', element: <UserRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

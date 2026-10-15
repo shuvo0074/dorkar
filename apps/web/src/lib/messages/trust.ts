@@ -61,6 +61,10 @@ export const trust = defineMessages(
     'report.reason.FAKE': 'Fake',
     'report.reason.HARASSMENT': 'Harassment',
     'report.reason.OTHER': 'Something else',
+    'profile.type': 'Account type',
+    'profile.verified': 'Verified',
+    'deal.otherSide': 'The other side',
+    'need.postedBy': 'Posted by',
   },
   {
     'review.title': 'লেনদেনটিকে রেটিং দিন',
@@ -121,5 +125,9 @@ export const trust = defineMessages(
     'report.reason.FAKE': 'ভুয়া',
     'report.reason.HARASSMENT': 'হয়রানি',
     'report.reason.OTHER': 'অন্য কিছু',
+    'profile.type': 'অ্যাকাউন্টের ধরন',
+    'profile.verified': 'যাচাই',
+    'deal.otherSide': 'অন্য পক্ষ',
+    'need.postedBy': 'পোস্ট করেছেন',
   },
 );

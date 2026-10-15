@@ -3,9 +3,9 @@ import type { Page } from '../../lib/http';
 import { useI18n } from '../../lib/i18n';
 
 /** A cursor-paginated list as one flat array, loading further pages on demand. */
-export function usePaged<T>(
+export function usePaged<P extends Page<unknown>>(
   queryKey: QueryKey,
-  fetch: (cursor: string | undefined) => Promise<Page<T>>,
+  fetch: (cursor: string | undefined) => Promise<P>,
   opts: { enabled?: boolean; refetchInterval?: number } = {},
 ) {
   const query = useInfiniteQuery({
@@ -16,7 +16,7 @@ export function usePaged<T>(
     ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
     ...(opts.refetchInterval ? { refetchInterval: opts.refetchInterval } : {}),
   });
-  const rows = query.data?.pages.flatMap((p) => p.data) ?? [];
+  const rows = (query.data?.pages.flatMap((p) => p.data) ?? []) as Array<P['data'][number]>;
   return { ...query, rows };
 }
 

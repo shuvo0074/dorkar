@@ -12,6 +12,7 @@ import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { offersApi, type OfferAction, type OfferDetail } from '../features/offers/api';
 import { OfferTermsList } from '../features/offers/OfferTerms';
+import { UserLink } from '../features/trust/UserLink';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
 import { shortCode, useFormat } from '../lib/format';
@@ -107,6 +108,12 @@ function OfferPage({ offer }: { offer: OfferDetail }) {
         </div>
         {offer.description && <p className="item__desc">{offer.description}</p>}
         <dl className="facts">
+          <div className="facts__row">
+            <dt>{t('deal.otherSide')}</dt>
+            <dd>
+              <UserLink userId={role === 'BUYER' ? offer.sellerId : offer.buyerId} />
+            </dd>
+          </div>
           <div className="facts__row">
             <dt>{t('offer.quantity')}</dt>
             <dd>{num(offer.quantity)}</dd>
