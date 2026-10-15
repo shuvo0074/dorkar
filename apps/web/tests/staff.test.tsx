@@ -264,3 +264,65 @@ describe('categories', () => {
     });
   });
 });
+
+describe('verification rules', () => {
+  it('shows rules read-only to admins and lets a super admin add one', async () => {
+    const rule = {
+      id: 'p1',
+      name: 'High-value deals need NID',
+      action: 'TRANSACTION_CREATE',
+      scope: 'VALUE_THRESHOLD',
+      selector: { minAmount: 5_000_000 },
+      requirement: 'REQUIRED',
+      kinds: ['NID'],
+      active: true,
+      priority: 10,
+      version: 1,
+      updatedBy: null,
+      createdAt: '',
+      updatedAt: '',
+    };
+    fakeApi({
+      ...signedIn(['ADMIN']),
+      'GET /api/v1/admin/verification-policies': () => ({
+        body: { data: [rule], page: { nextCursor: null } },
+      }),
+    });
+    renderApp('/desk/policies');
+    expect(await screen.findByText('High-value deals need NID')).toBeInTheDocument();
+    expect(screen.getByText(/Amounts from: ৳50,000/)).toBeInTheDocument();
+    expect(screen.getByText(/you can read these rules/i)).toBeInTheDocument();
+  });
+
+  it('creates a rule as a super admin', async () => {
+    const { catalogRoutes } = await import('./fixtures');
+    const { calls } = fakeApi({
+      ...signedIn(['SUPER_ADMIN']),
+      ...catalogRoutes,
+      'GET /api/v1/admin/verification-policies': () => ({
+        body: { data: [], page: { nextCursor: null } },
+      }),
+      'POST /api/v1/admin/verification-policies': () => ({ status: 201, body: { data: {} } }),
+    });
+    renderApp('/desk/policies');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.type(screen.getByLabelText('Name'), 'Auctions need NID');
+    await user.selectOptions(screen.getByLabelText('When someone'), 'AUCTION_CREATE');
+    await user.click(screen.getByRole('button', { name: 'Save rule' }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.key === 'POST /api/v1/admin/verification-policies')?.body).toEqual(
+        {
+          name: 'Auctions need NID',
+          action: 'AUCTION_CREATE',
+          scope: 'GLOBAL',
+          selector: {},
+          requirement: 'REQUIRED',
+          kinds: ['NID'],
+          active: true,
+          priority: 0,
+        },
+      ),
+    );
+  });
+});
