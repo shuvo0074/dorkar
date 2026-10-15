@@ -98,6 +98,15 @@ export const offers = defineMessages(
     'myOffers.browse': 'Browse needs',
     'nav.deals': 'Deals',
     'need.makeOffer': 'Make an offer',
+    'matched.title': 'Needs matched to you',
+    'matched.note': 'From your listings and what you sell',
+    'matched.empty':
+      'Nothing matched yet. Needs that fit your listings and seller profile appear here.',
+    'matched.offer': 'Make an offer',
+    'matched.dismiss': 'Not for me',
+    'matched.responded': 'You offered',
+    'matched.ends': 'closes {when}',
+    'myOffers.sent': 'Offers you sent',
   },
   {
     'nav.offers': 'অফার',
@@ -194,5 +203,14 @@ export const offers = defineMessages(
     'myOffers.browse': 'দরকার দেখুন',
     'nav.deals': 'লেনদেন',
     'need.makeOffer': 'অফার দিন',
+    'matched.title': 'আপনার সাথে মেলা দরকার',
+    'matched.note': 'আপনার লিস্টিং আর যা বিক্রি করেন তা থেকে',
+    'matched.empty':
+      'এখনও কিছু মেলেনি। আপনার লিস্টিং আর বিক্রেতা প্রোফাইলের সাথে মেলা দরকার এখানে আসবে।',
+    'matched.offer': 'অফার দিন',
+    'matched.dismiss': 'আমার জন্য নয়',
+    'matched.responded': 'অফার দিয়েছেন',
+    'matched.ends': '{when} বন্ধ হবে',
+    'myOffers.sent': 'আপনার পাঠানো অফার',
   },
 );

@@ -2043,3 +2043,16 @@ p {
     display: none;
   }
 }
+.ledger__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+@media (max-width: 520px) {
+  .ledger li > .ledger__btns,
+  .ledger li > .muted {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

@@ -150,3 +150,55 @@ describe('comparing offers', () => {
     expect(await screen.findByText(/Withdrawn/)).toBeInTheDocument();
   });
 });
+
+describe('your offers', () => {
+  it('shows needs matched to the seller and the offers they sent', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      'GET /api/v1/me/matched-needs': () => ({
+        body: {
+          data: [
+            {
+              matchId: '0192f0c4-0000-7000-8000-0000000aa001',
+              status: 'NEW',
+              score: 80,
+              reasons: {},
+              listingId: null,
+              matchedAt: '2026-10-15T08:00:00.000Z',
+              need: {
+                id: NEED,
+                title: 'Used iPhone 15 Pro, 256GB',
+                mode: 'BUY',
+                categoryId: 'x',
+                quantity: 1,
+                district: 'dhaka',
+                budget: { min: null, max: { amount: 8_000_000, currency: 'BDT' } },
+                expiresAt: '2026-11-15T00:00:00.000Z',
+              },
+            },
+          ],
+          page: { nextCursor: null },
+        },
+      }),
+      'POST /api/v1/me/matched-needs/0192f0c4-0000-7000-8000-0000000aa001/dismiss': () => ({
+        status: 204,
+      }),
+      'GET /api/v1/me/offers': () => ({
+        body: {
+          data: [offer({ buyerId: OTHER, sellerId: ME, awaiting: 'BUYER' })],
+          page: { nextCursor: null },
+        },
+      }),
+    });
+    renderApp('/my/offers');
+    const user = userEvent.setup();
+    expect(await screen.findByRole('link', { name: 'Used iPhone 15 Pro, 256GB' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Make an offer' })).toHaveAttribute(
+      'href',
+      `/needs/${NEED}/offer`,
+    );
+    expect(await screen.findByRole('link', { name: '৳78,000' })).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Not for me' }));
+    await waitFor(() => expect(calls.some((c) => c.key.endsWith('/dismiss'))).toBe(true));
+  });
+});

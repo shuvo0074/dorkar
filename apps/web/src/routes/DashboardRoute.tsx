@@ -36,6 +36,9 @@ function Dashboard() {
           <Link className="btn btn--outline btn--small" to="/my/needs">
             {t('myNeeds.title')}
           </Link>
+          <Link className="btn btn--outline btn--small" to="/my/offers">
+            {t('myOffers.title')}
+          </Link>
           {can('dashboard:read') && (
             <Link className="btn btn--outline btn--small" to="/desk">
               {t('dash.staffLink')}
