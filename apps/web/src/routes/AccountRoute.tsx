@@ -59,6 +59,9 @@ export default function AccountRoute() {
       </section>
 
       <nav className="account__links" aria-label={t('account.settings')}>
+        <Link className="btn btn--outline btn--small" to="/account/profile">
+          {t('me.title')}
+        </Link>
         <Link className="btn btn--outline btn--small" to="/account/notifications">
           {t('prefs.title')}
         </Link>

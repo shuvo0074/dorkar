@@ -2369,3 +2369,29 @@ p {
     font-size: 0.8rem;
   }
 }
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 2px 2px 10px;
+  border: var(--hair);
+  border-radius: var(--r-ctl);
+}
+.chips button {
+  min-width: 36px;
+  min-height: 36px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 1.2rem;
+  cursor: pointer;
+}
