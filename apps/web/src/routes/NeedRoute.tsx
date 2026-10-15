@@ -15,6 +15,7 @@ import {
 } from '../features/needs/api';
 import { modeLetter, needCode } from '../features/needs/modes';
 import { NeedTermsList } from '../features/needs/NeedTerms';
+import { OfferCompare } from '../features/offers/OfferCompare';
 import { ApiError } from '../lib/http';
 import { errorMessage } from '../lib/errors';
 import { useFormat } from '../lib/format';
@@ -163,6 +164,7 @@ function NeedPage({ need }: { need: Need }) {
         </div>
       </aside>
 
+      {mine && need.status !== 'DRAFT' && <OfferCompare need={need} />}
       {mine && need.history && need.history.length > 0 && <History need={need} />}
     </article>
   );

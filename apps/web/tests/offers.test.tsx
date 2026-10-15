@@ -116,3 +116,37 @@ describe('negotiating', () => {
     expect(await screen.findByText('Waiting for them')).toBeInTheDocument();
   });
 });
+
+describe('comparing offers', () => {
+  it('lists offers on the owner’s need, cheapest first, circling the ones awaiting them', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(),
+      ...catalogRoutes,
+      [`GET /api/v1/needs/${NEED}`]: () => ({ body: { data: need({ offerCount: 2 }) } }),
+      [`GET /api/v1/needs/${NEED}/offers`]: () => ({
+        body: {
+          data: [
+            { ...offer(), sellerDisplayName: 'Rahim Telecom' },
+            {
+              ...offer({ id: '0192f0c4-0000-7000-8000-00000000f002', status: 'WITHDRAWN' }),
+              sellerDisplayName: null,
+            },
+          ],
+          page: { nextCursor: null },
+        },
+      }),
+    });
+    renderApp(`/needs/${NEED}`);
+    const user = userEvent.setup();
+    expect(await screen.findByRole('link', { name: '৳78,000' })).toHaveAttribute(
+      'href',
+      `/offers/${OFFER}`,
+    );
+    expect(screen.getByText(/From Rahim Telecom/)).toBeInTheDocument();
+    expect(screen.getAllByText('Your turn').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Withdrawn/)).not.toBeInTheDocument();
+    expect(calls.some((c) => c.key.includes(`/needs/${NEED}/offers?sort=price_asc`))).toBe(true);
+    await user.click(screen.getByRole('radio', { name: 'All' }));
+    expect(await screen.findByText(/Withdrawn/)).toBeInTheDocument();
+  });
+});

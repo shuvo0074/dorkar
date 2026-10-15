@@ -10,7 +10,7 @@ export type OfferTermsDraft = Record<string, string | boolean>;
 
 /** Start an offer's terms from what the need asked for. */
 export function offerTermsFromNeed(mode: NeedMode, need: Record<string, unknown>): OfferTermsDraft {
-  const s = (k: string) => (typeof need[k] === 'string' ? (need[k]) : '');
+  const s = (k: string) => (typeof need[k] === 'string' ? need[k] : '');
   switch (mode) {
     case 'RENT':
       return { startAt: localInput(need['startAt']), endAt: localInput(need['endAt']) };

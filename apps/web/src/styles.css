@@ -2012,3 +2012,34 @@ p {
 .counter h3 {
   font-size: 1.5rem;
 }
+.offers li {
+  grid-template-columns: 72px 1fr auto;
+}
+.offers .ledger__art {
+  width: 72px;
+  aspect-ratio: auto;
+  min-height: 44px;
+  font-size: 0.78rem;
+}
+.offers__amount {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 400;
+  line-height: 1.1;
+  text-decoration: none;
+}
+.offers__amount:hover {
+  text-decoration: underline;
+}
+.item__wide .ledger__here,
+.offers .ledger__here {
+  margin: 0 8px;
+}
+@media (max-width: 520px) {
+  .offers li {
+    grid-template-columns: 1fr;
+  }
+  .offers .ledger__art {
+    display: none;
+  }
+}
