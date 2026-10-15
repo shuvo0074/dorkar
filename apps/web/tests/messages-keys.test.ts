@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -8,14 +8,10 @@ describe('message tables', () => {
     const dir = join(__dirname, '../src/lib/messages');
     const owner = new Map<string, string>();
     const clashes: string[] = [];
-    // The core table in i18n.tsx counts as an area too.
-    const core = readFileSync(join(__dirname, '../src/lib/i18n.tsx'), 'utf8');
-    const coreEn = core.slice(core.indexOf('const coreEn = {'), core.indexOf('} as const;'));
-    for (const m of coreEn.matchAll(/^ {2}'([^']+)':/gm)) owner.set(m[1]!, 'i18n.tsx');
-    for (const file of readdirSync(dir).filter((f) => f !== 'define.ts')) {
-      const mod = (await import(join(dir, file))) as Record<string, { en: object }>;
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.ts') && f !== 'index.ts')) {
+      const mod = (await import(join(dir, file))) as Record<string, object>;
       for (const table of Object.values(mod)) {
-        for (const key of Object.keys(table.en)) {
+        for (const key of Object.keys(table)) {
           const prev = owner.get(key);
           if (prev && prev !== file) clashes.push(`${key} (${prev}, ${file})`);
           owner.set(key, file);

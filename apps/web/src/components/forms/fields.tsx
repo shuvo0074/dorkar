@@ -1,4 +1,4 @@
-import { Districts, Divisions } from '@dorkar/contracts';
+import { Districts, Divisions } from '@dorkar/contracts/places';
 import { useId, type ReactNode } from 'react';
 import { AlertIcon } from '../glyphs/glyphs';
 import { useI18n } from '../../lib/i18n';

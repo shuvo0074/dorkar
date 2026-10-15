@@ -1,4 +1,4 @@
-import { Districts, type District } from '@dorkar/contracts';
+import { Districts, type District } from '@dorkar/contracts/places';
 import { useMemo } from 'react';
 import { useI18n } from './i18n';
 import type { Money } from './money';

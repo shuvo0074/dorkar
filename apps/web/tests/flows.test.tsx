@@ -60,10 +60,20 @@ describe('home', () => {
     });
   });
 
+  it('switches to Bangla without losing what was typed', async () => {
+    fakeApi(signedOut);
+    renderApp('/');
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText('Your need'), 'A tall ladder');
+    await user.click(screen.getAllByRole('button', { name: 'Switch to Bangla' })[0]!);
+    expect(await screen.findByRole('heading', { level: 1, name: 'কী দরকার?' })).toBeInTheDocument();
+    expect(screen.getByLabelText('আপনার দরকার')).toHaveValue('A tall ladder');
+  });
+
   it('renders fully in Bangla', async () => {
     fakeApi(signedOut);
     renderApp('/', 'bn');
-    expect(screen.getByRole('heading', { level: 1, name: 'কী দরকার?' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'কী দরকার?' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /কিনব/ })).toBeInTheDocument();
   });
 });

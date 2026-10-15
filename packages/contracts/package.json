@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./authz": "./src/authz.ts"
+    "./authz": "./src/authz.ts",
+    "./places": "./src/places.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
