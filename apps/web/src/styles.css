@@ -2457,3 +2457,41 @@ p {
 .ledger li[data-unread] .ledger__title {
   text-decoration-thickness: 2.5px;
 }
+
+/* ---------- disputes ---------- */
+
+.dispute__stamp {
+  width: 64px;
+  height: 64px;
+  border: var(--hair);
+  display: grid;
+  place-items: center;
+}
+.dispute__stamp svg {
+  width: 72%;
+  height: 72%;
+  filter: url(#ink-print);
+}
+.casefile li[data-staff] {
+  padding-left: 12px;
+  border-left: 3px dashed var(--ink-soft);
+}
+.casefile__text {
+  grid-column: 2;
+  max-width: 62ch;
+  white-space: pre-line;
+}
+.casefile__media {
+  grid-column: 2;
+  max-width: 420px;
+}
+.casefile .stamp {
+  margin-left: 8px;
+  font-size: 0.75rem;
+}
+@media (max-width: 520px) {
+  .casefile__text,
+  .casefile__media {
+    grid-column: 1;
+  }
+}

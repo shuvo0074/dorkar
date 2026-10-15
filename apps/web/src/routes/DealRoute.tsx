@@ -18,6 +18,7 @@ import {
   type DisputeReason,
 } from '../features/deals/api';
 import { MessageButton } from '../features/messages/MessageButton';
+import { disputesApi } from '../features/disputes/api';
 import { needsApi } from '../features/needs/api';
 import { modeLetter } from '../features/needs/modes';
 import { DealReviews } from '../features/trust/DealReviews';
@@ -162,6 +163,7 @@ function DealPage({ deal }: { deal: DealDetail }) {
             <Row label={t('deal.disputeReason')}>
               {deal.disputeCategory && `${t(`reason.${deal.disputeCategory}`)}: `}
               {deal.disputeReason}
+              {role && <DisputeLink transactionId={deal.id} />}
             </Row>
           )}
         </dl>
@@ -455,5 +457,21 @@ function DisputeForm({ busy, onSend, onClose, mode }: SubForm & { mode: DealDeta
         </button>
       </div>
     </form>
+  );
+}
+
+/** The dispute on this deal, found among the member's disputes. */
+function DisputeLink({ transactionId }: { transactionId: string }) {
+  const { t } = useI18n();
+  const mine = useQuery({
+    queryKey: ['me', 'disputes', 'for', transactionId],
+    queryFn: () => disputesApi.mine(),
+  });
+  const d = mine.data?.data.find((x) => x.transactionId === transactionId);
+  if (!d) return null;
+  return (
+    <span className="facts__aside">
+      <Link to={`/disputes/${d.id}`}>{t('dispute.see')}</Link>
+    </span>
   );
 }

@@ -33,6 +33,8 @@ const NotificationSettingsRoute = lazy(() => import('../routes/NotificationSetti
 const ProfileSettingsRoute = lazy(() => import('../routes/ProfileSettingsRoute'));
 const MessagesRoute = lazy(() => import('../routes/MessagesRoute'));
 const ConversationRoute = lazy(() => import('../routes/ConversationRoute'));
+const DisputesRoute = lazy(() => import('../routes/DisputesRoute'));
+const DisputeRoute = lazy(() => import('../routes/DisputeRoute'));
 
 export const routes = [
   {
@@ -65,6 +67,8 @@ export const routes = [
       { path: 'account/profile', element: <ProfileSettingsRoute /> },
       { path: 'messages', element: <MessagesRoute /> },
       { path: 'messages/:id', element: <ConversationRoute /> },
+      { path: 'disputes', element: <DisputesRoute /> },
+      { path: 'disputes/:id', element: <DisputeRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },
