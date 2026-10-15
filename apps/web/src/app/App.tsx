@@ -38,6 +38,11 @@ const DisputeRoute = lazy(() => import('../routes/DisputeRoute'));
 const BookingsRoute = lazy(() => import('../routes/BookingsRoute'));
 const BookingRoute = lazy(() => import('../routes/BookingRoute'));
 const RentalSettingsRoute = lazy(() => import('../routes/RentalSettingsRoute'));
+const LendItemsRoute = lazy(() => import('../routes/LendItemsRoute'));
+const LendItemRoute = lazy(() => import('../routes/LendItemRoute'));
+const LendFormRoute = lazy(() => import('../routes/LendFormRoute'));
+const LoansRoute = lazy(() => import('../routes/LoansRoute'));
+const LoanRoute = lazy(() => import('../routes/LoanRoute'));
 
 export const routes = [
   {
@@ -75,6 +80,12 @@ export const routes = [
       { path: 'bookings', element: <BookingsRoute /> },
       { path: 'bookings/:id', element: <BookingRoute /> },
       { path: 'listings/:id/rental', element: <RentalSettingsRoute /> },
+      { path: 'lend', element: <LendItemsRoute /> },
+      { path: 'lend/new', element: <LendFormRoute /> },
+      { path: 'lend/:id', element: <LendItemRoute /> },
+      { path: 'lend/:id/edit', element: <LendFormRoute /> },
+      { path: 'loans', element: <LoansRoute /> },
+      { path: 'loans/:id', element: <LoanRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

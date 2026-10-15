@@ -48,6 +48,9 @@ function Dashboard() {
           <Link className="btn btn--outline btn--small" to="/bookings">
             {t('dash.bookings')}
           </Link>
+          <Link className="btn btn--outline btn--small" to="/loans">
+            {t('dash.loans')}
+          </Link>
           <Link className="btn btn--outline btn--small" to="/disputes">
             {t('dash.disputes')}
           </Link>

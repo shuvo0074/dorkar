@@ -18,6 +18,7 @@ import { profile } from './messages/profile';
 import { chat } from './messages/chat';
 import { disputes } from './messages/disputes';
 import { rentals } from './messages/rentals';
+import { lending } from './messages/lending';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -684,6 +685,7 @@ const en = {
   ...chat.en,
   ...disputes.en,
   ...rentals.en,
+  ...lending.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
@@ -700,6 +702,7 @@ const bn: Table = {
   ...chat.bn,
   ...disputes.bn,
   ...rentals.bn,
+  ...lending.bn,
 };
 
 export type Lang = 'en' | 'bn';
