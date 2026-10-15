@@ -277,6 +277,11 @@ function OwnerControls({ listing }: { listing: Listing }) {
           {t('rterms.title')}
         </Link>
       )}
+      {listing.kind === 'PRODUCT' && listing.status === 'PUBLISHED' && (
+        <Link className="btn btn--outline btn--small" to={`/auctions/new?listing=${listing.id}`}>
+          {t('listing.auction')}
+        </Link>
+      )}
       {commands
         .filter((c) => c !== 'withdraw')
         .map((c) => (

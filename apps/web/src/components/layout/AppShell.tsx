@@ -80,6 +80,7 @@ export function AppShell() {
             <NavLink to="/needs">{t('nav.needs')}</NavLink>
             <NavLink to="/listings">{t('nav.listings')}</NavLink>
             <NavLink to="/lend">{t('nav.lend')}</NavLink>
+            <NavLink to="/auctions">{t('nav.auctions')}</NavLink>
             {signedIn && (
               <NavLink to="/inbox" aria-label={inboxLabel}>
                 {t('nav.inbox')}

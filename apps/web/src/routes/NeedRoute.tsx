@@ -204,6 +204,11 @@ function OwnerControls({ need }: { need: Need }) {
           {t('common.edit')}
         </Link>
       )}
+      {need.status === 'OPEN' && (need.mode === 'SOURCE' || need.mode === 'BUY') && (
+        <Link className="btn btn--outline btn--small" to={`/auctions/new?need=${need.id}`}>
+          {t('need.reverseAuction')}
+        </Link>
+      )}
       {commands
         .filter((c) => c !== 'close')
         .map((c) => (

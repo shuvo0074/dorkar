@@ -43,6 +43,10 @@ const LendItemRoute = lazy(() => import('../routes/LendItemRoute'));
 const LendFormRoute = lazy(() => import('../routes/LendFormRoute'));
 const LoansRoute = lazy(() => import('../routes/LoansRoute'));
 const LoanRoute = lazy(() => import('../routes/LoanRoute'));
+const AuctionsRoute = lazy(() => import('../routes/AuctionsRoute'));
+const AuctionRoute = lazy(() => import('../routes/AuctionRoute'));
+const AuctionFormRoute = lazy(() => import('../routes/AuctionFormRoute'));
+const MyAuctionsRoute = lazy(() => import('../routes/MyAuctionsRoute'));
 
 export const routes = [
   {
@@ -86,6 +90,10 @@ export const routes = [
       { path: 'lend/:id/edit', element: <LendFormRoute /> },
       { path: 'loans', element: <LoansRoute /> },
       { path: 'loans/:id', element: <LoanRoute /> },
+      { path: 'auctions', element: <AuctionsRoute /> },
+      { path: 'auctions/new', element: <AuctionFormRoute /> },
+      { path: 'auctions/:id', element: <AuctionRoute /> },
+      { path: 'my/auctions', element: <MyAuctionsRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },
