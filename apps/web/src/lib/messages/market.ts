@@ -42,6 +42,7 @@ export const market = defineMessages(
     'delivery.DELIVERY': 'Deliver to me',
 
     'place.district': 'District',
+    'place.pick': 'Choose a district',
     'place.area': 'Area',
     'place.areaHint': 'Neighbourhood or thana, e.g. Mirpur 10.',
     'place.anywhere': 'Anywhere in Bangladesh',
@@ -106,6 +107,7 @@ export const market = defineMessages(
     'delivery.DELIVERY': 'আমার কাছে পৌঁছে দিন',
 
     'place.district': 'জেলা',
+    'place.pick': 'জেলা বাছুন',
     'place.area': 'এলাকা',
     'place.areaHint': 'পাড়া বা থানা, যেমন মিরপুর ১০।',
     'place.anywhere': 'বাংলাদেশের যেকোনো জায়গা',

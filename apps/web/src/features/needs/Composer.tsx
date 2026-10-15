@@ -1,42 +1,14 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { AlertIcon, NoteIcon } from '../../components/glyphs/glyphs';
+import { AlertIcon } from '../../components/glyphs/glyphs';
 import { useI18n } from '../../lib/i18n';
 import { useSession } from '../auth/session';
+import { loadDraft, saveDraft, type ComposerDraft } from './draft';
 import { ModeKey } from './ModeKey';
-import { Modes, type Mode } from './modes';
-
-const DRAFT_KEY = 'dorkar.needDraft';
-
-interface Draft {
-  mode: Mode;
-  text: string;
-}
-
-function loadDraft(): Draft {
-  try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    const parsed = raw ? (JSON.parse(raw) as Partial<Draft>) : {};
-    return {
-      mode: Modes.includes(parsed.mode as Mode) ? (parsed.mode as Mode) : 'BUY',
-      text: typeof parsed.text === 'string' ? parsed.text.slice(0, 600) : '',
-    };
-  } catch {
-    return { mode: 'BUY', text: '' };
-  }
-}
-
-function saveDraft(d: Draft) {
-  try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-  } catch {
-    // a draft is a convenience; losing it is acceptable
-  }
-}
 
 /**
- * "What do you need?" — the primary action. Posting itself ships with the demand service; until
- * then the composer keeps an honest draft on the device and says so, rather than faking a post.
+ * "What do you need?" — the primary action. The words are kept on the device and carried into
+ * the full need form, through sign-in if needed.
  */
 export function Composer() {
   const { t } = useI18n();
@@ -44,8 +16,8 @@ export function Composer() {
   const navigate = useNavigate();
   const fieldId = useId();
   const hintId = useId();
-  const [draft, setDraft] = useState<Draft>(loadDraft);
-  const [notice, setNotice] = useState<'empty' | 'saved' | null>(null);
+  const [draft, setDraft] = useState<ComposerDraft>(loadDraft);
+  const [notice, setNotice] = useState<'empty' | null>(null);
 
   useEffect(() => saveDraft(draft), [draft]);
 
@@ -57,10 +29,10 @@ export function Composer() {
       return;
     }
     if (status !== 'signedIn') {
-      void navigate('/sign-in', { state: { from: '/', reason: 'post' } });
+      void navigate('/sign-in', { state: { from: '/needs/new', reason: 'post' } });
       return;
     }
-    setNotice('saved');
+    void navigate('/needs/new');
   };
 
   return (
@@ -95,12 +67,6 @@ export function Composer() {
         <p className="alert" role="alert">
           <AlertIcon />
           <span>{t('home.empty')}</span>
-        </p>
-      )}
-      {notice === 'saved' && (
-        <p className="alert alert--note" role="status">
-          <NoteIcon />
-          <span>{t('home.draftSaved')}</span>
         </p>
       )}
 

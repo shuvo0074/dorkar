@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react';
 import { market } from './messages/market';
+import { needs } from './messages/needs';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -38,8 +39,6 @@ const coreEn = {
   'home.browse': 'Browse listings',
   'home.soon': 'Soon',
   'home.signInToPost': 'Sign in with your mobile number to post. It takes a minute.',
-  'home.draftSaved':
-    'Posting opens with the next release. Your draft is saved on this device, so it will be waiting.',
   'home.empty': 'Write what you need first.',
   'mode.BUY': 'Buy',
   'mode.RENT': 'Rent',
@@ -363,7 +362,6 @@ const coreBn: Record<keyof typeof coreEn, string> = {
   'home.browse': 'লিস্টিং দেখুন',
   'home.soon': 'শিগগিরই',
   'home.signInToPost': 'পোস্ট করতে মোবাইল নম্বর দিয়ে সাইন ইন করুন। এক মিনিট লাগবে।',
-  'home.draftSaved': 'পরের আপডেটে পোস্ট করা চালু হবে। আপনার খসড়া এই ডিভাইসে রাখা আছে।',
   'home.empty': 'আগে লিখুন, কী দরকার।',
   'mode.BUY': 'কিনব',
   'mode.RENT': 'ভাড়া নেব',
@@ -665,12 +663,14 @@ const coreBn: Record<keyof typeof coreEn, string> = {
 const en = {
   ...coreEn,
   ...market.en,
+  ...needs.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
 const bn: Table = {
   ...coreBn,
   ...market.bn,
+  ...needs.bn,
 };
 
 export type Lang = 'en' | 'bn';

@@ -1783,3 +1783,174 @@ p {
 .checks[data-invalid] .check span {
   border-color: var(--red-ink);
 }
+
+/* ---------- item pages (need, listing, offer, deal) ---------- */
+
+.item,
+.formpage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 36px;
+  padding-top: clamp(24px, 4vw, 48px);
+}
+.item__head,
+.formpage > header {
+  display: grid;
+  gap: 12px;
+}
+.item h1 {
+  font-size: clamp(2.6rem, 8vw, 4.6rem);
+  max-width: 18ch;
+}
+.formpage h1 {
+  font-size: clamp(3rem, 11vw, 5.4rem);
+}
+.item__tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.modetile {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 1.7rem;
+  line-height: 1;
+}
+.modetile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--red);
+  -webkit-mask-image: var(--ink-wear);
+  mask-image: var(--ink-wear);
+}
+.stamp {
+  display: inline-block;
+  padding: 3px 8px 1px;
+  border: var(--hair);
+  border-radius: 3px;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+:lang(bn) .stamp {
+  font-stretch: 80%;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+.stamp--ink {
+  background: var(--ink);
+  color: var(--paper);
+}
+.item__meta {
+  color: var(--ink-soft);
+}
+.item__desc {
+  max-width: 62ch;
+  margin-bottom: 22px;
+  white-space: pre-line;
+}
+.item__count {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+:lang(bn) .item__count {
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: 1.35rem;
+}
+.item__side .panel {
+  display: grid;
+  gap: 14px;
+}
+.item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.item__actions > .label,
+.item__actions > p,
+.item__actions > .alert,
+.item__actions > .ledger__confirm {
+  flex-basis: 100%;
+}
+.facts__row {
+  display: contents;
+}
+@media (min-width: 900px) {
+  .item {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    column-gap: 56px;
+    align-items: start;
+  }
+  .item > .item__head,
+  .item > .item__wide {
+    grid-column: 1 / -1;
+  }
+  .item > .item__side {
+    position: sticky;
+    top: 24px;
+  }
+}
+
+/* Long forms: numbered, ruled sections like the steps on the home page. */
+.formpage form {
+  display: grid;
+  gap: 44px;
+  max-width: 760px;
+}
+.formsec {
+  display: grid;
+  gap: 20px;
+}
+.formsec > h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding-bottom: 8px;
+  border-bottom: var(--rule);
+  font-size: clamp(1.8rem, 4vw, 2.3rem);
+}
+.formsec__n {
+  color: var(--red);
+  font-size: 1.15em;
+}
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+@media (min-width: 560px) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.attrs {
+  display: grid;
+  gap: 20px;
+}
+@media (min-width: 560px) {
+  .attrs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.formactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.formactions .btn:first-child {
+  flex: 1 1 220px;
+}

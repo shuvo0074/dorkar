@@ -113,6 +113,22 @@ export interface RequestOptions {
   idempotencyKey?: string;
 }
 
+/** "?a=1&b=x" from the defined, non-empty entries; "" when there are none. */
+export function query(params: Record<string, string | number | boolean | null | undefined>) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
+  }
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
+/** One page of a cursor-paginated list, as every list endpoint returns it. */
+export interface Page<T> {
+  data: T[];
+  page: { nextCursor: string | null };
+}
+
 /** A fresh idempotency key for one user intent. */
 export const intentKey = (): string => crypto.randomUUID();
 
