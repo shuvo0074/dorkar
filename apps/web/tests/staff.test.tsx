@@ -177,3 +177,51 @@ describe('ID checks', () => {
     );
   });
 });
+
+describe('accounts and content', () => {
+  it('suspends a member with a reason', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(['ADMIN']),
+      [`GET /api/v1/users/${OTHER}`]: () => ({
+        status: 404,
+        body: { error: { code: 'NOT_FOUND' } },
+      }),
+      [`POST /api/v1/admin/accounts/${OTHER}/status`]: () => ({
+        body: { data: { id: OTHER, status: 'SUSPENDED' } },
+      }),
+    });
+    renderApp(`/desk/accounts?id=${OTHER}`);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText('Reason'), 'Repeated scam reports');
+    await user.click(screen.getByRole('button', { name: 'Change status' }));
+    expect(await screen.findByText(/is now Suspended/)).toBeInTheDocument();
+    expect(
+      calls.find((c) => c.key === `POST /api/v1/admin/accounts/${OTHER}/status`)?.body,
+    ).toEqual({
+      status: 'SUSPENDED',
+      reason: 'Repeated scam reports',
+    });
+  });
+
+  it('lets a moderator hide a need from its page', async () => {
+    const { catalogRoutes, need } = await import('./fixtures');
+    const { calls } = fakeApi({
+      ...signedIn(['MODERATOR']),
+      ...catalogRoutes,
+      [`GET /api/v1/needs/${NEED}`]: () => ({ body: { data: need({ requesterId: OTHER }) } }),
+      [`POST /api/v1/admin/needs/${NEED}/hide`]: () => ({
+        body: { data: { id: NEED, status: 'HIDDEN' } },
+      }),
+    });
+    renderApp(`/needs/${NEED}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Hide (staff)' }));
+    await user.type(screen.getByLabelText('Reason'), 'Prohibited item');
+    await user.click(screen.getByRole('button', { name: 'Hide (staff)' }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.key === `POST /api/v1/admin/needs/${NEED}/hide`)?.body).toEqual({
+        reason: 'Prohibited item',
+      }),
+    );
+  });
+});

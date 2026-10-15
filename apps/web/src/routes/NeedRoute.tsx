@@ -6,6 +6,7 @@ import { LedgerSkeleton, LoadError } from '../components/ui/Status';
 import { useSession } from '../features/auth/session';
 import { AttributeList } from '../features/catalog/AttributeList';
 import { useCategories } from '../features/catalog/categories';
+import { ContentControls } from '../features/desk/ContentControls';
 import {
   needCommands,
   needEditable,
@@ -173,6 +174,12 @@ function NeedPage({ need }: { need: Need }) {
           )}
         </div>
         {!mine && <ReportButton targetType="NEED" targetId={need.id} />}
+        <ContentControls
+          kind="NEED"
+          id={need.id}
+          hidden={need.status === 'HIDDEN'}
+          queryKey={['needs', need.id]}
+        />
       </aside>
 
       {mine && need.status !== 'DRAFT' && <OfferCompare need={need} />}

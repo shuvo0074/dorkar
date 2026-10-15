@@ -50,6 +50,7 @@ const MyAuctionsRoute = lazy(() => import('../routes/MyAuctionsRoute'));
 const ModerationRoute = lazy(() => import('../routes/desk/ModerationRoute'));
 const DisputeQueueRoute = lazy(() => import('../routes/desk/DisputeQueueRoute'));
 const VerificationsRoute = lazy(() => import('../routes/desk/VerificationsRoute'));
+const AccountsRoute = lazy(() => import('../routes/desk/AccountsRoute'));
 
 export const routes = [
   {
@@ -101,6 +102,7 @@ export const routes = [
       { path: 'desk/moderation/:id', element: <ModerationRoute /> },
       { path: 'desk/disputes', element: <DisputeQueueRoute /> },
       { path: 'desk/verifications', element: <VerificationsRoute /> },
+      { path: 'desk/accounts', element: <AccountsRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },

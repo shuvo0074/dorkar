@@ -16,6 +16,7 @@ import { AttributeList } from '../features/catalog/AttributeList';
 import { useCategories } from '../features/catalog/categories';
 import { kindGlyph, listingCode, usePrice } from '../features/catalog/ListingEntry';
 import { dealsApi } from '../features/deals/api';
+import { ContentControls } from '../features/desk/ContentControls';
 import { MediaImage } from '../features/media/Photos';
 import { MessageButton } from '../features/messages/MessageButton';
 import { RentPanel } from '../features/rentals/RentPanel';
@@ -184,6 +185,12 @@ function ListingPage({ listing }: { listing: Listing }) {
           )}
         </div>
         {!mine && <ReportButton targetType="LISTING" targetId={listing.id} />}
+        <ContentControls
+          kind="LISTING"
+          id={listing.id}
+          hidden={listing.status === 'HIDDEN'}
+          queryKey={['listings', listing.id]}
+        />
       </aside>
     </article>
   );

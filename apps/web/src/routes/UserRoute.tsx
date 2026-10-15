@@ -1,9 +1,10 @@
-import { useParams } from 'react-router';
+import { Link, useParams } from 'react-router';
 import { PersonGlyph } from '../components/glyphs/glyphs';
 import { Biro } from '../components/ui/Biro';
 import { MoreButton, usePaged } from '../components/ui/Paging';
 import { LedgerSkeleton, LoadError } from '../components/ui/Status';
 import { useCategories } from '../features/catalog/categories';
+import { useCan } from '../features/auth/permissions';
 import { useSession } from '../features/auth/session';
 import { trustApi, type PublicProfile } from '../features/trust/api';
 import { ReportButton } from '../features/trust/ReportButton';
@@ -28,6 +29,7 @@ function Profile({ p }: { p: PublicProfile }) {
   const f = useFormat();
   const categories = useCategories();
   const me = useSession().account?.id;
+  const can = useCan();
   const rep = p.reputation;
   const verified = p.badges.length > 0;
 
@@ -124,6 +126,11 @@ function Profile({ p }: { p: PublicProfile }) {
 
       <Reviews userId={p.id} />
       {me !== p.id && <ReportButton targetType="USER" targetId={p.id} />}
+      {me !== p.id && can('user:suspend') && (
+        <p className="report">
+          <Link to={`/desk/accounts?id=${p.id}`}>{t('staff.tool.accounts')}</Link>
+        </p>
+      )}
     </article>
   );
 }
