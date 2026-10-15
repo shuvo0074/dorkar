@@ -61,6 +61,10 @@ export const chatApi = {
   read: (id: string, upToMessageId: string) =>
     api(`/api/v1/conversations/${enc(id)}/read`, { method: 'POST', body: { upToMessageId } }),
   block: (userId: string) => api('/api/v1/me/blocked-users', { method: 'POST', body: { userId } }),
+  blocked: (cursor?: string) =>
+    api<Page<{ userId: string; blockedAt: string }>>(
+      `/api/v1/me/blocked-users${query({ cursor, limit: 50 })}`,
+    ),
   unblock: (userId: string) =>
     api<void>(`/api/v1/me/blocked-users/${enc(userId)}`, { method: 'DELETE' }),
 };

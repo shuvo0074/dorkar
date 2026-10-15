@@ -5,6 +5,7 @@ import { LaptopGlyph, PersonGlyph, PhoneGlyph } from '../components/glyphs/glyph
 import { Biro } from '../components/ui/Biro';
 import { LedgerSkeleton, LoadError } from '../components/ui/Status';
 import { accountApi, type DeviceView } from '../features/account/api';
+import { BlockedPeople, MyReports } from '../features/account/Safety';
 import { useSession } from '../features/auth/session';
 import { errorMessage } from '../lib/errors';
 import { useI18n } from '../lib/i18n';
@@ -69,6 +70,8 @@ export default function AccountRoute() {
 
       <Devices />
       <Sessions />
+      <BlockedPeople />
+      <MyReports />
 
       <div className="account__actions">
         <button

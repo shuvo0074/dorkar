@@ -34,4 +34,7 @@ export const chat = {
   'chat.messageBuyer': 'Message the buyer',
   'chat.messageLender': 'Message the lender',
   'chat.live': 'New messages appear here as they arrive.',
+  'blocked.title': 'Blocked people',
+  'blocked.empty': 'You haven’t blocked anyone.',
+  'blocked.since': 'Blocked {when}',
 };

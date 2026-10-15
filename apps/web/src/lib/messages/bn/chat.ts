@@ -33,4 +33,7 @@ export const chat: Record<keyof typeof en, string> = {
   'chat.messageBuyer': 'ক্রেতাকে বার্তা দিন',
   'chat.messageLender': 'ধারদাতাকে বার্তা দিন',
   'chat.live': 'নতুন বার্তা এলে এখানে দেখা যাবে।',
+  'blocked.title': 'ব্লক করা মানুষ',
+  'blocked.empty': 'আপনি কাউকে ব্লক করেননি।',
+  'blocked.since': '{when} ব্লক করা',
 };

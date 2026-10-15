@@ -85,6 +85,18 @@ export const trustApi = {
     api<{ data: PublicProfile }>(`/api/v1/users/${enc(userId)}`, { auth: false }).then(
       (r) => r.data,
     ),
+  myReports: (cursor?: string) =>
+    api<
+      Page<{
+        id: string;
+        targetType: ReportTarget;
+        targetId: string;
+        reason: ReportReason;
+        details: string | null;
+        status: 'OPEN' | 'RESOLVED' | 'DISMISSED';
+        createdAt: string;
+      }>
+    >(`/api/v1/reports/mine${query({ cursor, limit: 20 })}`),
   report: (input: {
     targetType: ReportTarget;
     targetId: string;

@@ -62,4 +62,9 @@ export const trust = {
   'profile.verified': 'Verified',
   'deal.otherSide': 'The other side',
   'need.postedBy': 'Posted by',
+  'reports.title': 'Your reports',
+  'reports.empty': 'You haven’t reported anything.',
+  'reports.status.OPEN': 'Being looked at',
+  'reports.status.RESOLVED': 'Acted on',
+  'reports.status.DISMISSED': 'No action needed',
 };

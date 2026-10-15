@@ -63,4 +63,9 @@ export const trust: Record<keyof typeof en, string> = {
   'profile.verified': 'যাচাই',
   'deal.otherSide': 'অন্য পক্ষ',
   'need.postedBy': 'পোস্ট করেছেন',
+  'reports.title': 'আপনার রিপোর্ট',
+  'reports.empty': 'আপনি কিছু রিপোর্ট করেননি।',
+  'reports.status.OPEN': 'দেখা হচ্ছে',
+  'reports.status.RESOLVED': 'ব্যবস্থা নেওয়া হয়েছে',
+  'reports.status.DISMISSED': 'ব্যবস্থার দরকার হয়নি',
 };
