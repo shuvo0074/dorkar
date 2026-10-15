@@ -39,9 +39,10 @@ products.
 - Payment is cash and delivery is arranged by the two parties at launch; phone numbers are never
   shown to other users by default.
 - Prices in Taka (৳), stored in poisha; locations follow Bangladesh divisions/districts/areas.
-- Version 1 of the web app can only exercise what the backend serves today: sign-in, account,
-  sessions and devices. Needs, offers, listings and transactions arrive service by service; the UI
-  must show them as coming, never fake them.
+- The web app covers the whole marketplace the backend serves: needs, offers, listings, deals,
+  reviews, messages, rentals, lending, auctions, disputes, notifications and the staff desk. Anything
+  the backend doesn't do yet (online payment, couriers, push on the web) is not shown at all, never
+  faked.
 
 ## Capabilities and Constraints
 

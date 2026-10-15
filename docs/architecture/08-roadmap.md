@@ -31,19 +31,19 @@ have a presence and matching has supply, but the UX leads with the Need.
 
 ## 3. Module-by-module plan
 
-| #   | Module                                         | Status                                               |
-| --- | ---------------------------------------------- | ---------------------------------------------------- |
-| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done                                              |
-| 2   | Identity service                               | ✅ done                                              |
-| 3   | Gateway                                        | ✅ done                                              |
-| 4   | Profile + Verification                         | ✅ done                                              |
-| 5   | Catalog                                        | ✅ done                                              |
-| 6   | Demand + Matching                              | ✅ done                                              |
-| 7   | Offer                                          | ✅ done                                              |
-| 8   | Transaction                                    | ✅ done                                              |
-| 9   | Reputation, Moderation, Notification, Media    | ✅ done                                              |
-| 10  | Phase 2 (see below)                            | ✅ done                                              |
-| 11  | Web app                                        | in progress: v1 (home, sign-in, account), dashboards |
+| #   | Module                                         | Status              |
+| --- | ---------------------------------------------- | ------------------- |
+| 1   | Platform kernel, repo tooling, local infra, CI | ✅ done             |
+| 2   | Identity service                               | ✅ done             |
+| 3   | Gateway                                        | ✅ done             |
+| 4   | Profile + Verification                         | ✅ done             |
+| 5   | Catalog                                        | ✅ done             |
+| 6   | Demand + Matching                              | ✅ done             |
+| 7   | Offer                                          | ✅ done             |
+| 8   | Transaction                                    | ✅ done             |
+| 9   | Reputation, Moderation, Notification, Media    | ✅ done             |
+| 10  | Phase 2 (see below)                            | ✅ done             |
+| 11  | Web app                                        | ✅ done (see below) |
 
 Phase 2 status:
 
@@ -58,6 +58,15 @@ Phase 2 status:
 | Admin dashboard + cross-service activity log, personal dashboard | ✅ (ADR-0010)                                                    |
 | Observability stack                                              | ✅ Prometheus metrics, trace context, Grafana (OTel export next) |
 | Search engine                                                    | not needed yet: Postgres FTS per service is within targets       |
+
+Web app status: every member and staff flow the backend serves has a page: posting and browsing
+needs, offers and negotiation, listings with photos, deals from agreement to review, public
+profiles, reports, inbox and notification settings, profile, seller capabilities and NID
+verification, messaging (long poll), rentals and bookings, lending and loans, auctions, disputes,
+and the desk (figures, activity log, moderation, disputes, ID checks, accounts, categories,
+verification rules, auction and deal monitors). English and Bangla throughout; the Bangla tables
+load on demand and the first load is about 146 KB gzipped. Not yet: web push (needs an FCM web
+token), Playwright journeys beyond sign-in and dashboards, and a prerender for public pages.
 
 Known follow-ups: S3 media storage and a production SMS provider (both behind ports, untested
 against real vendors); a `MediaDeleted` event; category deactivation cascading to listings;

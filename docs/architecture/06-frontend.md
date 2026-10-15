@@ -97,3 +97,22 @@ components differ.
 - Vitest + Testing Library for components/hooks; MSW for API mocking.
 - Playwright E2E against the docker-compose stack (see 07-operations §3).
 - axe checks in component tests and E2E.
+
+## 6. As built (web)
+
+- `features/<area>/api.ts` are hand-written typed clients over `lib/http.ts` (one per service
+  area); they mirror the services' Zod route schemas. Commands the API marks **(idem)** carry an
+  `Idempotency-Key` from `useIntent()`, one key per user intent, renewed after success.
+- Buttons for needs, offers, deals, bookings, loans, auctions and disputes come from each DTO's
+  `actions` where the API provides one; needs and listings, which have none, use the owner
+  transition tables in their `api.ts`.
+- `routes/` holds one lazy module per page (`routes/desk/` for staff tools); staff pages gate on
+  permissions from `@dorkar/contracts/authz` and the server authorizes again.
+- Strings live in `lib/messages/<area>.ts` (English) with a twin in `lib/messages/bn/` typed key
+  for key. The Bangla tables are a separate chunk loaded on first use; a test fails if two areas
+  define the same key.
+- The first load stays inside the budget by importing only dependency-free contract subpaths
+  (`@dorkar/contracts/authz`, `@dorkar/contracts/places`) from code on the home page; zod and the
+  event schemas load with the pages that validate.
+- Live data: the inbox count refreshes every minute, live auctions every ten seconds, and a
+  conversation long-polls (`after` + `wait=8`) with a back-off when the server answers at once.

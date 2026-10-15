@@ -289,8 +289,10 @@ A 108px square badge (2px ink rule) with the person etching, circled in ballpoin
 ### Navigation
 
 - **Masthead:** wordmark DORKAR | দরকার (Anton plus condensed Bengali, separated by a 2px ink bar), 3px hall-red rule beneath.
-- **Top nav (900px+):** Anton 1.3rem caps; the current route is underlined 3px in hall red, 0.25em offset. Language toggle is a 1.5px outlined 4px-cornered button, min 44px, set in the other language's face.
-- **Bottom nav (under 900px):** fixed bar on newsprint with a 2px ink top rule; 26px drawn icons over 0.95rem Anton labels (0.85rem with four items); the current route fills its navdot. Three items signed out (Catalog, Post, Sign in), four signed in (adds Dashboard). Staff reach the desk from the dashboard and the top nav.
+- **Top nav (900px+):** Anton 1.15rem caps that wrap to a second line before they crowd the wordmark; the current route is underlined 3px in hall red, 0.25em offset. Catalog, Needs, Listings, Borrow and Auctions for everyone; Inbox (with its count tag), Messages, Dashboard and, for staff, Desk once signed in. The masthead tagline shows from 1240px. Language toggle is a 1.5px outlined 4px-cornered button, min 44px, set in the other language's face.
+- **Bottom nav (under 900px):** fixed bar on newsprint with a 2px ink top rule; 26px drawn icons over 0.95rem Anton labels (0.78rem with five items); the current route fills its navdot. Three items signed out (Catalog, Post, Sign in), five signed in (adds Inbox and Dashboard). On phones the catalogues are reached from the home page's browse tiles.
+- **Count tag:** unread notifications are a small solid-ink tag (Courier bold 0.72rem, 3px corners) beside the Inbox label or on the corner of its envelope icon. The link's accessible name carries the number.
+- **Browse tiles:** under the composer, four 2px-ruled tiles with a 36px etching and an Anton label lead to open needs, listings, things to borrow and auctions; hover is the Second Frame.
 
 ### Dashboards
 
@@ -302,6 +304,23 @@ The personal dashboard (`/dashboard`), the staff desk (`/desk`) and the activity
 - **Ink chart:** HTML columns with a 1.5px ink outline and a printed 45° hatch tile (an SVG pattern, not a gradient) standing on a 2px baseline. The tallest column is solid ink with the wear mask, and its figure is circled in ballpoint, drawing on once when the measure changes. Values are repeated in a visually hidden table.
 - **Funnel:** red step numerals as in How it works, each with a hatched bar sized to the first step (capped at full width). A later step larger than the one before is explained in words, not shown as a percentage over 100.
 - **Activity rows:** ledger rows with a three-letter service code in the plate; the row expands (native details) into a hairline-ruled fact box with the action code, actor, target, request, IP fingerprint and recorded facts, and one-click "only this account / item" filters. Server labels are English; Bangla pages use a Bangla table for member-visible actions and mark any English fallback `lang="en"`.
+
+### Marketplace pages
+
+Needs, listings, offers, deals, bookings, loans, auctions and disputes share three page shapes built from the same parts:
+
+- **Browse page:** a display title, a lede, a ruled filter panel (segmented mode or kind, compact fields in a 1/2/3-column grid) whose choices live in the URL, then a catalog grid of entries and a Show more button. Entries are the catalog squares: a member photo when there is one, otherwise the mode's or kind's etched stamp (Bag for buy, Key for rent, Ladder for borrow, Person for hire, Crate for source; Gavel for auctions), then the code (`B-3F09C2`, `L-…`, `A-…`), title and meta.
+- **Item page:** a head with a crumb, a tag line (a 40px hall-red mode tile with the paper letter, the code, and a **state stamp**: Anton caps in a 1.5px-ruled 3px-cornered tag, printed solid ink while the thing is live), a display title and an ink-soft meta line. Below, a facts list (Anton terms, bold Courier values, asides in ink-soft), and from 900px a sticky side panel (2px rule) carrying the one thing to do next. Its buttons come from the API's `actions`; destructive ones confirm in place in a `hall-red-ink` box, forms that need words (counter, cancel reason, dispute) open in place in a 2px-ruled box. Timelines and histories run full width underneath.
+- **Long form:** numbered sections like How it works (a hall-red numeral on a 2px rule), fields in pairs from 560px, the primary button filling the first slot of the action row. Field errors sit under their field with a drawn alert icon in `hall-red-ink`; a summary alert says to fix the marked fields and focus moves to the first one.
+
+Shared parts:
+
+- **Checkboxes and chips:** a 44px ruled cell with a 16px square that fills with ink (inset paper ring) when ticked; chosen districts are 1.5px-ruled chips with a × button.
+- **Photos:** member photos are content and appear inside the square plates (cover-cropped) and in a 4:3 gallery on item pages with 64px thumbnails (the chosen one framed); the etched stamp is the fallback while loading or when there is none. The picker is an outlined button over a hidden file input, with per-file problems listed in one alert.
+- **Ratings:** five 13px ruled squares, the rating's worth filled with ink; the accessible name reads "4 out of 5".
+- **Messages:** lines in 1.5px-ruled boxes, one's own lines right-aligned with a 2px rule, unsent lines dashed with a retry link; the composer sits under the log.
+- **Case file:** the dispute timeline as a ledger; staff-only entries carry a dashed 3px left rule and a stamp.
+- **Desk tools:** a row of outlined small buttons on the desk, each shown only with its permission.
 
 ### Motion
 
@@ -330,11 +349,12 @@ One motion exists: the ballpoint loop draws on (stroke-dashoffset 1 to 0, 520ms,
 - **Don't** round stamp plates, or round controls beyond 4px.
 - **Don't** apply the wear mask or ink-print filter to text, focus rings or the page ground.
 - **Don't** add a second animation or animate the loop on every render; it is keyed to the change it marks.
-- **Don't** use photographs, emoji or third-party icon sets in place of the etched plates.
+- **Don't** use stock photographs, emoji or third-party icon sets in place of the etched plates. Photos members upload are content, shown in the plates, with the etching as fallback.
 - **Don't** track out or uppercase Bangla text.
 
 ### Open items (not yet achieved)
 
 - The stamp illustrations are hand-authored vector drawings passed through a filter; they should become real etched raster or traced plates matching the board's craft.
 - The ink-wear texture is procedural fractal noise applied uniformly; it should become an edge-weighted raster wear texture (heavier at fill edges, as press ink wears).
-- The Bengali variable font (about 190 KB) loads on every page because the wordmark uses it, even in English; it should be subset for the wordmark or deferred.
+- The Bengali variable font (about 190 KB) loads on every page because the wordmark uses it, even in English; it should be subset for the wordmark or deferred. (The Bangla strings themselves now load only when Bangla is chosen.)
+- Categories carry no etchings of their own yet, so entries use the mode's or kind's stamp; each top-level category should get its plate.
