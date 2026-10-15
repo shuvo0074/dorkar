@@ -326,3 +326,20 @@ describe('verification rules', () => {
     );
   });
 });
+
+describe('monitors', () => {
+  it('lists every deal for support staff', async () => {
+    const { deal } = await import('./fixtures');
+    fakeApi({
+      ...signedIn(['SUPPORT']),
+      'GET /api/v1/admin/transactions': () => ({
+        body: {
+          data: [deal({ terms: { title: 'Ceiling fan repair' } })],
+          page: { nextCursor: null },
+        },
+      }),
+    });
+    renderApp('/desk/deals');
+    expect(await screen.findByRole('link', { name: 'Ceiling fan repair' })).toBeVisible();
+  });
+});

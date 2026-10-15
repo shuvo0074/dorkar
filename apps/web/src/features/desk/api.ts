@@ -1,6 +1,9 @@
 import type { AccountStatus, NeedMode } from '@dorkar/contracts';
 import { api, query, type Page } from '../../lib/http';
 import type { AttributeSchema } from '@dorkar/contracts';
+import type { Deal } from '../deals/api';
+import type { Loan } from '../lending/api';
+import type { Booking } from '../rentals/api';
 import type { ReportReason, ReportTarget } from '../trust/api';
 
 // ---------------------------------------------------------------- moderation
@@ -188,6 +191,13 @@ export const deskApi = {
         method: 'POST',
       }),
     ),
+
+  deals: (state: string | undefined, cursor?: string) =>
+    api<Page<Deal>>(`/api/v1/admin/transactions${query({ state, cursor, limit: 30 })}`),
+  bookings: (status: string | undefined, cursor?: string) =>
+    api<Page<Booking>>(`/api/v1/admin/bookings${query({ status, cursor, limit: 30 })}`),
+  loans: (status: string | undefined, cursor?: string) =>
+    api<Page<Loan>>(`/api/v1/admin/loans${query({ status, cursor, limit: 30 })}`),
 
   createCategory: (input: CategoryInput) =>
     api<{ data: { id: string } }>('/api/v1/admin/categories', { method: 'POST', body: input }),

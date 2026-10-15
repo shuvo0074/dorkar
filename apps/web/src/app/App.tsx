@@ -53,6 +53,12 @@ const VerificationsRoute = lazy(() => import('../routes/desk/VerificationsRoute'
 const AccountsRoute = lazy(() => import('../routes/desk/AccountsRoute'));
 const CategoriesRoute = lazy(() => import('../routes/desk/CategoriesRoute'));
 const PoliciesRoute = lazy(() => import('../routes/desk/PoliciesRoute'));
+const AuctionMonitorRoute = lazy(() =>
+  import('../routes/desk/MonitorRoutes').then((m) => ({ default: m.AuctionMonitorRoute })),
+);
+const DealMonitorRoute = lazy(() =>
+  import('../routes/desk/MonitorRoutes').then((m) => ({ default: m.DealMonitorRoute })),
+);
 
 export const routes = [
   {
@@ -108,6 +114,8 @@ export const routes = [
       { path: 'desk/categories', element: <CategoriesRoute /> },
       { path: 'desk/categories/:id', element: <CategoriesRoute /> },
       { path: 'desk/policies', element: <PoliciesRoute /> },
+      { path: 'desk/auctions', element: <AuctionMonitorRoute /> },
+      { path: 'desk/deals', element: <DealMonitorRoute /> },
       { path: '*', element: <NotFoundRoute /> },
     ],
   },
