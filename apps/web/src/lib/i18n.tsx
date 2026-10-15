@@ -12,6 +12,7 @@ import { needs } from './messages/needs';
 import { offers } from './messages/offers';
 import { deals } from './messages/deals';
 import { trust } from './messages/trust';
+import { listings } from './messages/listings';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -40,7 +41,6 @@ const coreEn = {
   'home.hint': 'What, where, when, and your budget.',
   'home.post': 'Post need',
   'home.browse': 'Browse listings',
-  'home.soon': 'Soon',
   'home.signInToPost': 'Sign in with your mobile number to post. It takes a minute.',
   'home.empty': 'Write what you need first.',
   'mode.BUY': 'Buy',
@@ -364,7 +364,6 @@ const coreBn: Record<keyof typeof coreEn, string> = {
   'home.hint': 'কী, কোথায়, কবে, আর আপনার বাজেট।',
   'home.post': 'পোস্ট করুন',
   'home.browse': 'লিস্টিং দেখুন',
-  'home.soon': 'শিগগিরই',
   'home.signInToPost': 'পোস্ট করতে মোবাইল নম্বর দিয়ে সাইন ইন করুন। এক মিনিট লাগবে।',
   'home.empty': 'আগে লিখুন, কী দরকার।',
   'mode.BUY': 'কিনব',
@@ -672,6 +671,7 @@ const en = {
   ...offers.en,
   ...deals.en,
   ...trust.en,
+  ...listings.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
@@ -682,6 +682,7 @@ const bn: Table = {
   ...offers.bn,
   ...deals.bn,
   ...trust.bn,
+  ...listings.bn,
 };
 
 export type Lang = 'en' | 'bn';

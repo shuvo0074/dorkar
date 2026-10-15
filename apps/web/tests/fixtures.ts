@@ -206,3 +206,48 @@ export const deal = (over: Record<string, unknown> = {}) => ({
   ],
   ...over,
 });
+
+export const LISTING = '0192f0c4-0000-7000-8000-00000000b001';
+export const MEDIA = '0192f0c4-0000-7000-8000-00000000a001';
+
+export const listing = (over: Record<string, unknown> = {}) => ({
+  id: LISTING,
+  sellerId: OTHER,
+  categoryId: PHONES,
+  kind: 'PRODUCT',
+  condition: 'USED',
+  title: 'iPhone 13, 128GB, blue',
+  description: 'One owner, no scratches.',
+  price: money(52_000),
+  priceUnit: 'TOTAL',
+  quantityAvailable: 1,
+  attributes: { brand: 'Apple' },
+  district: 'dhaka',
+  area: 'Dhanmondi',
+  deliveryModes: ['BUYER_PICKUP'],
+  mediaIds: [MEDIA],
+  status: 'PUBLISHED',
+  publishedAt: '2026-10-14T08:00:00.000Z',
+  createdAt: '2026-10-14T08:00:00.000Z',
+  updatedAt: '2026-10-14T08:00:00.000Z',
+  ...over,
+});
+
+export const mediaRoutes = {
+  [`GET /api/v1/media/${MEDIA}`]: () => ({
+    body: {
+      data: {
+        id: MEDIA,
+        purpose: 'LISTING',
+        status: 'READY',
+        contentType: 'image/webp',
+        width: 320,
+        height: 240,
+        rejectionReason: null,
+        createdAt: '2026-10-14T08:00:00.000Z',
+        urls: { thumb: '/files/thumb.webp', medium: '/files/medium.webp' },
+        urlsExpireAt: '2026-10-14T08:10:00.000Z',
+      },
+    },
+  }),
+};

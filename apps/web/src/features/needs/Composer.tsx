@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { AlertIcon } from '../../components/glyphs/glyphs';
 import { useI18n } from '../../lib/i18n';
 import { useSession } from '../auth/session';
@@ -74,17 +74,9 @@ export function Composer() {
         <button type="submit" className="btn btn--block">
           {t('home.post')}
         </button>
-        <button
-          type="button"
-          className="btn btn--outline"
-          disabled
-          aria-describedby={`${hintId}-soon`}
-        >
+        <Link className="btn btn--outline" to="/listings">
           {t('home.browse')}
-          <span className="tag" id={`${hintId}-soon`}>
-            {t('home.soon')}
-          </span>
-        </button>
+        </Link>
       </div>
       {status === 'signedOut' && <p className="field__hint">{t('home.signInToPost')}</p>}
     </form>

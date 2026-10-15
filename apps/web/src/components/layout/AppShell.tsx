@@ -70,6 +70,7 @@ export function AppShell() {
               {t('nav.catalog')}
             </NavLink>
             <NavLink to="/needs">{t('nav.needs')}</NavLink>
+            <NavLink to="/listings">{t('nav.listings')}</NavLink>
             {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
             {signedIn && can('dashboard:read') && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
             <NavLink to={accountTo}>{accountLabel}</NavLink>
