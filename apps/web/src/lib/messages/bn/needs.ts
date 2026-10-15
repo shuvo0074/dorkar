@@ -138,4 +138,10 @@ export const needs: Record<keyof typeof en, string> = {
   'myNeeds.post': 'দরকার পোস্ট করুন',
   'myNeeds.offers': '{n}টি অফার',
   'myNeeds.updated': 'হালনাগাদ {when}',
+  'matches.title': 'যে বিক্রেতাদের জানানো হয়েছে',
+  'matches.note': 'ক্যাটাগরি, জায়গা, বাজেট আর যা বিক্রি করেন তা মিলিয়ে',
+  'matches.empty': 'এখনও মেলেনি। বিক্রেতারা লিস্টিং প্রকাশ করলে বা বিক্রির তথ্য দিলে মেলানো হয়।',
+  'matches.listing': 'তাঁদের লিস্টিং',
+  'matches.score': 'মিল {n}',
+  'matches.responded': 'অফার দিয়েছেন',
 };

@@ -204,3 +204,35 @@ describe('reporting', () => {
     });
   });
 });
+
+describe('matches', () => {
+  it('shows the owner which sellers were told about the need', async () => {
+    fakeApi({
+      ...signedIn(),
+      ...catalogRoutes,
+      [`GET /api/v1/needs/${NEED}`]: () => ({ body: { data: need() } }),
+      [`GET /api/v1/needs/${NEED}/matches`]: () => ({
+        body: {
+          data: [
+            {
+              matchId: 'm1',
+              candidateType: 'LISTING',
+              sellerId: OTHER,
+              listingId: 'l1',
+              score: 82.4,
+              reasons: {},
+              status: 'NEW',
+            },
+          ],
+          page: { nextCursor: null },
+        },
+      }),
+    });
+    renderApp(`/needs/${NEED}`);
+    expect(await screen.findByText('Match 82')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Their listing' })).toHaveAttribute(
+      'href',
+      '/listings/l1',
+    );
+  });
+});

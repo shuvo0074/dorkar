@@ -136,4 +136,11 @@ export const needs = {
   'myNeeds.post': 'Post a need',
   'myNeeds.offers': '{n} offers',
   'myNeeds.updated': 'Updated {when}',
+  'matches.title': 'Sellers told about it',
+  'matches.note': 'Matched on category, place, budget and what they sell',
+  'matches.empty':
+    'No matches yet. Sellers are matched as they publish listings and set what they sell.',
+  'matches.listing': 'Their listing',
+  'matches.score': 'Match {n}',
+  'matches.responded': 'Made an offer',
 };

@@ -14,6 +14,7 @@ import {
   type Need,
   type NeedCommand,
 } from '../features/needs/api';
+import { Matches } from '../features/needs/Matches';
 import { modeLetter, needCode } from '../features/needs/modes';
 import { NeedTermsList } from '../features/needs/NeedTerms';
 import { OfferCompare } from '../features/offers/OfferCompare';
@@ -183,6 +184,7 @@ function NeedPage({ need }: { need: Need }) {
       </aside>
 
       {mine && need.status !== 'DRAFT' && <OfferCompare need={need} />}
+      {mine && need.status !== 'DRAFT' && <Matches needId={need.id} />}
       {mine && need.history && need.history.length > 0 && <History need={need} />}
     </article>
   );
