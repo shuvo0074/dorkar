@@ -148,7 +148,13 @@ function NeedPage({ need }: { need: Need }) {
           {mine ? (
             <OwnerControls need={need} />
           ) : session.status === 'signedIn' ? (
-            need.status !== 'OPEN' && <p className="muted">{t('need.notOpen')}</p>
+            need.status === 'OPEN' ? (
+              <Link className="btn btn--block" to={`/needs/${need.id}/offer`}>
+                {t('need.makeOffer')}
+              </Link>
+            ) : (
+              <p className="muted">{t('need.notOpen')}</p>
+            )
           ) : (
             <Link className="btn btn--block" to="/sign-in" state={{ from: `/needs/${need.id}` }}>
               {t('need.signInToOffer')}

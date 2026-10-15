@@ -1993,3 +1993,22 @@ p {
 .filters .segmented {
   margin: 0;
 }
+.item__sub {
+  font-size: 0.5em;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.ledger__confirm--ink {
+  border-color: var(--ink);
+}
+.counter {
+  display: grid;
+  flex-basis: 100%;
+  gap: 16px;
+  padding: 14px;
+  border: var(--rule);
+  border-radius: var(--r-box);
+}
+.counter h3 {
+  font-size: 1.5rem;
+}

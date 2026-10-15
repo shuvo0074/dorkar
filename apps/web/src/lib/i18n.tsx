@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { market } from './messages/market';
 import { needs } from './messages/needs';
+import { offers } from './messages/offers';
 
 /**
  * Two languages, one product. English is the default (product decision); Bangla is complete,
@@ -666,6 +667,7 @@ const en = {
   ...coreEn,
   ...market.en,
   ...needs.en,
+  ...offers.en,
 };
 export type MessageKey = keyof typeof en;
 type Table = Record<MessageKey, string>;
@@ -673,6 +675,7 @@ const bn: Table = {
   ...coreBn,
   ...market.bn,
   ...needs.bn,
+  ...offers.bn,
 };
 
 export type Lang = 'en' | 'bn';

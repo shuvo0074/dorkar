@@ -109,3 +109,46 @@ export const need = (over: Record<string, unknown> = {}) => ({
   history: [{ from: 'DRAFT', to: 'OPEN', reason: 'PUBLISHED', at: '2026-10-15T08:00:00.000Z' }],
   ...over,
 });
+
+export const OFFER = '0192f0c4-0000-7000-8000-00000000f001';
+
+export const offer = (over: Record<string, unknown> = {}) => ({
+  id: OFFER,
+  needId: NEED,
+  buyerId: ME,
+  sellerId: OTHER,
+  listingId: null,
+  status: 'SUBMITTED',
+  price: money(78_000),
+  quantity: 1,
+  condition: 'USED',
+  availabilityFrom: null,
+  deliveryTerms: { method: 'SELLER_DELIVERY', feeAmount: 20_000, etaDays: 2 },
+  modeTerms: { warrantyMonths: 3 },
+  description: 'Battery 91%, box included',
+  attachmentMediaIds: [],
+  expiresAt: '2026-10-18T08:00:00.000Z',
+  currentRound: 1,
+  awaiting: 'BUYER',
+  hidden: false,
+  createdAt: '2026-10-15T09:00:00.000Z',
+  updatedAt: '2026-10-15T09:00:00.000Z',
+  actions: ['ACCEPT', 'COUNTER', 'REJECT'],
+  rounds: [
+    {
+      round: 1,
+      proposedBy: 'SELLER',
+      price: money(78_000),
+      quantity: 1,
+      terms: {
+        delivery: { method: 'SELLER_DELIVERY', feeAmount: 20_000, etaDays: 2 },
+        mode: { warrantyMonths: 3 },
+        condition: 'USED',
+        availabilityFrom: null,
+      },
+      message: null,
+      createdAt: '2026-10-15T09:00:00.000Z',
+    },
+  ],
+  ...over,
+});
