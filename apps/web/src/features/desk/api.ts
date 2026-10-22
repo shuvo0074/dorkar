@@ -114,6 +114,15 @@ export interface CategoryInput {
   active?: boolean;
 }
 
+/** The staff view of a category: switched-off ones included. */
+export interface AdminCategory extends Required<CategoryInput> {
+  id: string;
+  attributeSchema: AttributeSchema;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 const enc = encodeURIComponent;
 const one = <T>(p: Promise<{ data: T }>) => p.then((r) => r.data);
 
@@ -199,6 +208,9 @@ export const deskApi = {
   loans: (status: string | undefined, cursor?: string) =>
     api<Page<Loan>>(`/api/v1/admin/loans${query({ status, cursor, limit: 30 })}`),
 
+  categories: () => one(api<{ data: AdminCategory[] }>('/api/v1/admin/categories')),
+  category: (id: string) =>
+    one(api<{ data: AdminCategory }>(`/api/v1/admin/categories/${enc(id)}`)),
   createCategory: (input: CategoryInput) =>
     api<{ data: { id: string } }>('/api/v1/admin/categories', { method: 'POST', body: input }),
   updateCategory: (id: string, patch: Partial<CategoryInput>) =>

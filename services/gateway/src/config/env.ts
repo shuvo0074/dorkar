@@ -57,10 +57,27 @@ export const gatewayEnvSchema = baseEnvSchema
     EVENTS_CONSUMER_ENABLED: bool.default(true),
     EVENTS_GROUP: z.string().default('gateway'),
 
+    /**
+     * The built web app's index.html. When set, the gateway answers page navigations: public
+     * pages (needs, listings, auctions, lend items, business profiles) prerendered for search
+     * engines and link previews, plus robots.txt and sitemap.xml. See interfaces/http/pages.ts.
+     */
+    WEB_INDEX_HTML: z.string().min(1).optional(),
+    /** The site's public origin for canonical URLs and the sitemap, e.g. https://dorkar.com.bd. */
+    PUBLIC_WEB_ORIGIN: z.url().optional(),
+    PRERENDER_TIMEOUT_MS: int(3_000, 100),
+
     /** Enables the gateway's own token-guarded `GET /metrics` (never proxied upstream). */
     METRICS_TOKEN: metricsTokenSchema,
   })
   .superRefine((c, ctx) => {
+    if (c.WEB_INDEX_HTML && !c.PUBLIC_WEB_ORIGIN) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['PUBLIC_WEB_ORIGIN'],
+        message: 'required with WEB_INDEX_HTML: canonical URLs and the sitemap need it',
+      });
+    }
     if (isProductionLike(c) && c.TRUST_PROXY === false) {
       ctx.addIssue({
         code: 'custom',

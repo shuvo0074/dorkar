@@ -104,6 +104,8 @@ Auth column: `—` public, `U` authenticated user, `P:perm` permission.
 | --------------------------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------- |
 | `GET /api/v1/categories`                                                                      | —                           | tree, cached (ETag)                                              |
 | `GET /api/v1/categories/:id/schema`                                                           | —                           | attribute JSON schema for forms                                  |
+| `GET /api/v1/admin/categories` · `GET /api/v1/admin/categories/:id`                           | P:`category:manage`         | flat, inactive ones included (to switch them back on)            |
+| `POST /api/v1/admin/categories` · `PATCH /api/v1/admin/categories/:id`                        | P:`category:manage`         | create; edit, including `active`                                 |
 | `POST /api/v1/listings`                                                                       | U                           | create draft                                                     |
 | `PATCH /api/v1/listings/:id` · `POST /api/v1/listings/:id/publish` · `…/pause` · `…/withdraw` | U (owner)                   |                                                                  |
 | `GET /api/v1/listings`                                                                        | —                           | `?q&categoryId&district&minPrice&maxPrice&condition&kind&cursor` |

@@ -111,6 +111,8 @@ export const staff = {
   'cat.modes': 'Modes',
   'cat.sort': 'Order',
   'cat.active': 'Active',
+  'cat.off': 'Off',
+  'cat.offHint': 'Switched off: hidden from members and closed to new needs and listings.',
   'cat.attributes': 'Questions',
   'cat.attrKey': 'Key',
   'cat.attrType': 'Answer type',

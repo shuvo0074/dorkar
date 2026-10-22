@@ -110,6 +110,8 @@ export const staff: Record<keyof typeof en, string> = {
   'cat.modes': 'মোড',
   'cat.sort': 'ক্রম',
   'cat.active': 'সক্রিয়',
+  'cat.off': 'বন্ধ',
+  'cat.offHint': 'বন্ধ আছে: সদস্যরা দেখতে পান না, নতুন দরকার বা লিস্টিং দেওয়া যায় না।',
   'cat.attributes': 'প্রশ্ন',
   'cat.attrKey': 'কী',
   'cat.attrType': 'উত্তরের ধরন',

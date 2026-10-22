@@ -87,10 +87,19 @@ components differ.
 - Search inputs debounced (300 ms); query keys normalized to avoid duplicate fetches.
 - Budgets (CI-enforced with Lighthouse CI on a 4G Moto G profile): LCP < 2.5 s,
   INP < 200 ms, CLS < 0.1, initial JS < 170 KB gzip.
-- SEO: public pages (needs, listings, categories) get server-rendered meta via
-  a prerender step for crawlers in Stage 1 (the gateway serves prerendered
-  HTML to bots); migrate to SSR (React Router framework mode) if organic
-  search becomes a key channel.
+- SEO: the gateway prerenders public pages (home, the needs, listings, auctions
+  and lending feeds, each need, listing, auction and lend item, and business
+  profiles). It reads the public API anonymously and fills the built
+  `index.html` with the page's title, description, canonical URL, Open Graph
+  tags and JSON-LD (`Demand` for needs, `Product` for listings), plus a plain
+  HTML snapshot inside `#root` that the app replaces when it mounts. Everyone
+  gets the same HTML (no user-agent sniffing), so WhatsApp and Facebook link
+  previews work too. Closed needs, unpublished listings and private people's
+  profiles are `noindex`; any other path gets the plain shell with `noindex`.
+  It also serves `robots.txt` and `sitemap.xml`. Renders are cached for a
+  minute; if a service fails, the plain shell is served. Code:
+  `services/gateway/src/application/pages.ts`. Migrate to SSR (React Router
+  framework mode) if organic search becomes a key channel.
 
 ## 5. Testing
 

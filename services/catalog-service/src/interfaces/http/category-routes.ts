@@ -142,6 +142,34 @@ export const categoryRoutes: FastifyPluginAsyncZod<CategoryRouteDeps> = async (
     },
   );
 
+  app.get(
+    '/api/v1/admin/categories',
+    {
+      preHandler: manage,
+      schema: {
+        tags: ['admin'],
+        ...secured,
+        summary: 'Every category, inactive ones included, flat',
+        response: { 200: z.object({ data: z.array(AdminCategoryDto) }), ...errors },
+      },
+    },
+    async () => ok((await categories.all()).map(toAdminDto)),
+  );
+
+  app.get(
+    '/api/v1/admin/categories/:id',
+    {
+      preHandler: manage,
+      schema: {
+        tags: ['admin'],
+        ...secured,
+        params: z.strictObject({ id: z.uuid() }),
+        response: { 200: z.object({ data: AdminCategoryDto }), ...errors },
+      },
+    },
+    async (req) => ok(toAdminDto(await categories.get(req.params.id))),
+  );
+
   app.post(
     '/api/v1/admin/categories',
     {

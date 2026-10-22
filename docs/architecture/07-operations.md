@@ -34,6 +34,28 @@ flowchart LR
 - Postgres on its own host (or managed) from day one so app hosts are
   disposable.
 
+### Serving the web app
+
+Caddy serves the built web app's files (`apps/web/dist`) and sends everything
+else to the gateway: the API, and page navigations, which the gateway answers
+with prerendered HTML (06-frontend §4). Give the gateway the same `index.html`
+(`WEB_INDEX_HTML`, re-read when it changes, so a web deploy needs no restart)
+and the site's origin (`PUBLIC_WEB_ORIGIN`).
+
+```caddyfile
+dorkar.com.bd {
+  root * /srv/web
+  @asset file
+  handle @asset {
+    header /assets/* Cache-Control "public, max-age=31536000, immutable"
+    file_server
+  }
+  handle {
+    reverse_proxy gateway:4000
+  }
+}
+```
+
 ### Stage 2+
 
 Multiple app hosts behind a load balancer; services scaled independently

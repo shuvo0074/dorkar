@@ -4,15 +4,13 @@ import {
   type AttributeSpec,
   type NeedMode,
 } from '@dorkar/contracts';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { CheckField, CheckGroup, SelectField, TextField } from '../../components/forms/fields';
 import { AlertIcon, NoteIcon } from '../../components/glyphs/glyphs';
 import { LedgerSkeleton, LoadError } from '../../components/ui/Status';
-import type { Category } from '../../features/catalog/api';
-import { useCategories, useCategory } from '../../features/catalog/categories';
-import { deskApi, type CategoryInput } from '../../features/desk/api';
+import { deskApi, type AdminCategory, type CategoryInput } from '../../features/desk/api';
 import { DeskCrumb, StaffPage } from '../../features/desk/tools';
 import { errorMessage } from '../../lib/errors';
 import { useI18n } from '../../lib/i18n';
@@ -27,9 +25,51 @@ export default function CategoriesRoute() {
   );
 }
 
+interface StaffCategory extends AdminCategory {
+  name: string;
+  path: string;
+  depth: number;
+  /** Off itself, or under a parent that is off: members cannot see it either way. */
+  hidden: boolean;
+}
+
+/**
+ * Every category, switched-off ones included: the public tree drops inactive
+ * categories, so an editor built on it could never switch one back on.
+ */
+function useStaffCategories() {
+  const { lang } = useI18n();
+  const all = useQuery({
+    queryKey: ['categories', 'all'],
+    queryFn: deskApi.categories,
+  });
+  const flat = useMemo(() => {
+    const byParent = new Map<string | null, AdminCategory[]>();
+    for (const c of all.data ?? []) {
+      byParent.set(c.parentId, [...(byParent.get(c.parentId) ?? []), c]);
+    }
+    const out: StaffCategory[] = [];
+    const walk = (parentId: string | null, trail: string[], hidden: boolean) => {
+      const kids = [...(byParent.get(parentId) ?? [])].sort(
+        (a, b) => a.sort - b.sort || a.nameEn.localeCompare(b.nameEn),
+      );
+      for (const c of kids) {
+        const name = lang === 'bn' ? c.nameBn : c.nameEn;
+        const path = [...trail, name];
+        const off = hidden || !c.active;
+        out.push({ ...c, name, path: path.join(' › '), depth: trail.length, hidden: off });
+        walk(c.id, path, off);
+      }
+    };
+    walk(null, [], false);
+    return out;
+  }, [all.data, lang]);
+  return { ...all, flat };
+}
+
 function Tree() {
   const { t } = useI18n();
-  const cats = useCategories();
+  const cats = useStaffCategories();
   return (
     <div className="browse">
       <header className="desk__head">
@@ -50,9 +90,21 @@ function Tree() {
         {cats.isError && <LoadError onRetry={() => void cats.refetch()} />}
         <ul className="cattree">
           {cats.flat.map((c) => (
-            <li key={c.id} style={{ paddingLeft: `${(c.path.split(' › ').length - 1) * 24}px` }}>
+            <li
+              key={c.id}
+              className={c.hidden ? 'cattree__off' : undefined}
+              style={{ paddingLeft: `${c.depth * 24}px` }}
+            >
               <Link to={`/desk/categories/${c.id}`}>{c.name}</Link>
               <span className="muted"> · {c.modes.map((m) => t(`mode.${m}`)).join(', ')}</span>
+              {!c.active && (
+                <>
+                  {' '}
+                  <span className="stamp" title={t('cat.offHint')}>
+                    {t('cat.off')}
+                  </span>
+                </>
+              )}
             </li>
           ))}
         </ul>
@@ -62,10 +114,13 @@ function Tree() {
 }
 
 function EditLoader({ id }: { id: string }) {
-  const c = useCategory(id);
+  const c = useQuery({
+    queryKey: ['categories', 'all', id],
+    queryFn: () => deskApi.category(id),
+  });
   if (c.isPending) return <LedgerSkeleton rows={6} />;
   if (c.isError) return <LoadError onRetry={() => void c.refetch()} />;
-  return <CategoryForm category={c.data} />;
+  return <CategoryForm key={c.data.id} category={c.data} />;
 }
 
 interface AttrRow {
@@ -130,18 +185,18 @@ function schemaFrom(rows: AttrRow[]): AttributeSchema {
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const KEY = /^[a-z][A-Za-z0-9]{0,39}$/;
 
-function CategoryForm({ category }: { category?: Category }) {
+function CategoryForm({ category }: { category?: AdminCategory }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const cats = useCategories();
+  const cats = useStaffCategories();
   const [parentId, setParentId] = useState(category?.parentId ?? '');
   const [slug, setSlug] = useState(category?.slug ?? '');
   const [nameEn, setNameEn] = useState(category?.nameEn ?? '');
   const [nameBn, setNameBn] = useState(category?.nameBn ?? '');
   const [modes, setModes] = useState<NeedMode[]>(category?.modes ?? ['BUY']);
   const [sort, setSort] = useState(String(category?.sort ?? 0));
-  const [active, setActive] = useState(true);
+  const [active, setActive] = useState(category?.active ?? true);
   const [rows, setRows] = useState<AttrRow[]>(() => rowsFrom(category?.attributeSchema));
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const save = useMutation({
@@ -200,7 +255,10 @@ function CategoryForm({ category }: { category?: Category }) {
             placeholder={t('cat.top')}
             options={cats.flat
               .filter((c) => c.id !== category?.id)
-              .map((c) => ({ value: c.id, label: c.path }))}
+              .map((c) => ({
+                value: c.id,
+                label: c.active ? c.path : `${c.path} (${t('cat.off')})`,
+              }))}
           />
           <div className="pair">
             <TextField
@@ -237,6 +295,7 @@ function CategoryForm({ category }: { category?: Category }) {
             error={errors['modes']}
           />
           <CheckField label={t('cat.active')} checked={active} onChange={setActive} />
+          {!active && <p className="muted">{t('cat.offHint')}</p>}
         </section>
 
         <section className="formsec" aria-labelledby="attrs-title">

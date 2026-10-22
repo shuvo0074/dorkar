@@ -66,7 +66,7 @@ verification, messaging (long poll), rentals and bookings, lending and loans, au
 and the desk (figures, activity log, moderation, disputes, ID checks, accounts, categories,
 verification rules, auction and deal monitors). English and Bangla throughout; the Bangla tables
 load on demand and the first load is about 146 KB gzipped. Not yet: web push (needs an FCM web
-token), Playwright journeys beyond sign-in and dashboards, and a prerender for public pages.
+token), and Playwright journeys beyond sign-in and dashboards. Public pages are prerendered by the gateway for search engines and link previews (06-frontend §4).
 
 Known follow-ups: S3 media storage and a production SMS provider (both behind ports, untested
 against real vendors); a `MediaDeleted` event; category deactivation cascading to listings;

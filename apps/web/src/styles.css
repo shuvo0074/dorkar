@@ -2656,6 +2656,10 @@ p {
   padding: 8px 0;
   border-bottom: var(--hair);
 }
+.cattree__off > a {
+  color: var(--ink-soft);
+  text-decoration-style: dashed;
+}
 .attrrow {
   margin: 0;
 }

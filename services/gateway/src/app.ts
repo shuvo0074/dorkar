@@ -15,8 +15,10 @@ import {
 import { createRemoteJWKSet } from 'jose';
 import { createRevocationHandler, type RevocationStore } from './application/revocation';
 import type { GatewayConfig } from './config/env';
+import { HttpPublicReader } from './infrastructure/http-public-reader';
 import { RedisRevocationStore } from './infrastructure/redis-revocation-store';
 import { registerEdgePolicy } from './interfaces/http/edge';
+import { registerPages } from './interfaces/http/pages';
 import { registerProxies } from './interfaces/http/proxy';
 import { ROUTE_TABLE, type Upstream } from './route-table';
 
@@ -104,13 +106,22 @@ export async function buildGateway(
     },
   });
 
+  const upstreams = upstreamUrls(config);
   const skipped = await registerProxies(app, {
     routes: ROUTE_TABLE,
-    upstreams: upstreamUrls(config),
+    upstreams,
     timeoutMs: config.UPSTREAM_TIMEOUT_MS,
   });
   if (skipped.length)
     logger.warn({ skipped }, 'upstreams not configured; their routes are disabled');
+
+  if (config.WEB_INDEX_HTML && config.PUBLIC_WEB_ORIGIN) {
+    await registerPages(app, {
+      shellPath: config.WEB_INDEX_HTML,
+      origin: config.PUBLIC_WEB_ORIGIN,
+      reader: new HttpPublicReader(upstreams, config.PRERENDER_TIMEOUT_MS),
+    });
+  }
 
   // Dedicated, unprefixed connection without command timeout: the consumer issues blocking reads.
   const consumer = new RedisStreamConsumer(

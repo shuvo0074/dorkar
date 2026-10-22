@@ -263,4 +263,37 @@ describe('admin categories', () => {
       .execute();
     expect(events.map((e) => (e.payload as { active: boolean }).active)).toEqual([true, false]);
   });
+
+  it('lists inactive categories to staff so they can be switched back on', async () => {
+    const c = (await createCategory({ active: false })).json().data;
+    const get = async (url: string, headers?: Record<string, string>) =>
+      app().inject({ url, ...(headers ? { headers } : {}) });
+
+    expect((await get('/api/v1/admin/categories')).statusCode).toBe(401);
+    expect(
+      (await get('/api/v1/admin/categories', await t.auth.as(randomUUID(), ['MODERATOR'])))
+        .statusCode,
+    ).toBe(403);
+
+    const list = await get('/api/v1/admin/categories', await admin());
+    expect(list.statusCode).toBe(200);
+    const all = list.json().data as Array<{ id: string; active: boolean; slug: string }>;
+    expect(all.find((x) => x.id === c.id)).toMatchObject({ active: false });
+    expect(all.map((x) => x.slug)).toContain('mobile-phones');
+
+    const one = await get(`/api/v1/admin/categories/${c.id}`, await admin());
+    expect(one.json().data).toMatchObject({ id: c.id, active: false, version: 0 });
+    expect((await get(`/api/v1/admin/categories/${randomUUID()}`, await admin())).statusCode).toBe(
+      404,
+    );
+
+    const on = await app().inject({
+      method: 'PATCH',
+      url: `/api/v1/admin/categories/${c.id}`,
+      headers: await admin(),
+      payload: { active: true },
+    });
+    expect(on.json().data).toMatchObject({ active: true });
+    expect((await get(`/api/v1/categories/${c.id}`)).statusCode).toBe(200);
+  });
 });

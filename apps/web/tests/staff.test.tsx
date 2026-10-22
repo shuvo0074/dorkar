@@ -227,11 +227,63 @@ describe('accounts and content', () => {
 });
 
 describe('categories', () => {
-  it('creates a category with a question', async () => {
-    const { catalogRoutes, ELECTRONICS } = await import('./fixtures');
+  const ELECTRONICS = '0192f0c4-0000-7000-8000-00000000c000';
+  const RETIRED = '0192f0c4-0000-7000-8000-00000000c009';
+  const staffCategory = (over: Record<string, unknown>) => ({
+    parentId: null,
+    nameBn: 'বাংলা',
+    modes: ['BUY'],
+    attributeSchema: { properties: {}, required: [] },
+    sort: 0,
+    active: true,
+    version: 1,
+    createdAt: '',
+    updatedAt: '',
+    ...over,
+  });
+  const staffCategories = [
+    staffCategory({ id: ELECTRONICS, slug: 'electronics', nameEn: 'Electronics' }),
+    staffCategory({
+      id: RETIRED,
+      parentId: ELECTRONICS,
+      slug: 'pagers',
+      nameEn: 'Pagers',
+      active: false,
+    }),
+  ];
+
+  it('lists switched-off categories and switches one back on', async () => {
     const { calls } = fakeApi({
       ...signedIn(['ADMIN']),
-      ...catalogRoutes,
+      'GET /api/v1/admin/categories': () => ({ body: { data: staffCategories } }),
+      [`GET /api/v1/admin/categories/${RETIRED}`]: () => ({ body: { data: staffCategories[1] } }),
+      [`PATCH /api/v1/admin/categories/${RETIRED}`]: () => ({
+        body: { data: { ...staffCategories[1], active: true, version: 2 } },
+      }),
+    });
+    const { router } = renderApp('/desk/categories');
+    const user = userEvent.setup();
+    const pagers = await screen.findByRole('link', { name: 'Pagers' });
+    expect(pagers.closest('li')).toHaveTextContent('Off');
+
+    await user.click(pagers);
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/desk/categories/${RETIRED}`));
+    const active = await screen.findByRole('checkbox', { name: 'Active' });
+    expect(active).not.toBeChecked();
+    expect(screen.getByRole('option', { name: 'Electronics' })).toBeInTheDocument();
+    await user.click(active);
+    await user.click(screen.getByRole('button', { name: 'Save category' }));
+    await waitFor(() =>
+      expect(
+        calls.find((c) => c.key === `PATCH /api/v1/admin/categories/${RETIRED}`)?.body,
+      ).toMatchObject({ slug: 'pagers', parentId: ELECTRONICS, active: true }),
+    );
+  });
+
+  it('creates a category with a question', async () => {
+    const { calls } = fakeApi({
+      ...signedIn(['ADMIN']),
+      'GET /api/v1/admin/categories': () => ({ body: { data: staffCategories } }),
       'POST /api/v1/admin/categories': () => ({ status: 201, body: { data: { id: 'new-cat' } } }),
     });
     const { router } = renderApp('/desk/categories/new');

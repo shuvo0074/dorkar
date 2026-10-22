@@ -28,6 +28,7 @@ export const SERVICES = {
   dashboard: { dir: 'services/dashboard-service', port: 4018, schema: 'dashboard' },
 };
 export const GATEWAY_PORT = 4000;
+const WEB_INDEX_HTML = resolve(ROOT, 'apps/web/dist/index.html');
 
 export function readDevEnv() {
   if (!existsSync(DEV_ENV_FILE)) {
@@ -122,5 +123,9 @@ export function gatewayEnv(dev) {
     CORS_ORIGINS: 'http://localhost:5173',
     TRUST_PROXY: 'false',
     ...upstreams,
+    // Prerendered public pages (http://localhost:4000/needs/…) once the web app has been built.
+    ...(existsSync(WEB_INDEX_HTML)
+      ? { WEB_INDEX_HTML, PUBLIC_WEB_ORIGIN: 'http://localhost:5173' }
+      : {}),
   };
 }

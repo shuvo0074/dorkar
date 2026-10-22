@@ -35,6 +35,17 @@ export class CategoryService {
     return c;
   }
 
+  /** Staff view: every category, switched off or not, so one can be switched back on. */
+  async all(): Promise<Category[]> {
+    return this.uow.store.allCategories();
+  }
+
+  async get(id: string): Promise<Category> {
+    const c = await this.uow.store.category(id);
+    if (!c) throw Errors.notFound('Category');
+    return c;
+  }
+
   async create(input: Omit<NewCategory, 'id'>, ctx: RequestContext): Promise<Category> {
     requireActor(ctx);
     assertAttributeSchemaCoherent(input.attributeSchema);
