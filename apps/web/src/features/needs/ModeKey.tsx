@@ -1,11 +1,19 @@
-import { useRef, type KeyboardEvent } from 'react';
-import { Biro } from '../../components/ui/Biro';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { BorrowIcon, BuyIcon, HireIcon, RentIcon, SourceIcon } from '../../components/icons/icons';
 import { useI18n } from '../../lib/i18n';
-import { modeLetter, Modes, type Mode } from './modes';
+import { Modes, type Mode } from './modes';
+
+export const modeIcon: Record<Mode, () => ReactNode> = {
+  BUY: BuyIcon,
+  RENT: RentIcon,
+  BORROW: BorrowIcon,
+  HIRE: HireIcon,
+  SOURCE: SourceIcon,
+};
 
 /**
- * The mode picker drawn as the catalog's hall key. A radio group: arrow keys move the choice,
- * and the chosen key gets circled in ballpoint.
+ * The mode picker as a row of service tiles. A radio group: arrow keys move the choice, and the
+ * chosen tile fills with the accent.
  */
 export function ModeKey({ value, onChange }: { value: Mode; onChange: (m: Mode) => void }) {
   const { t } = useI18n();
@@ -29,6 +37,7 @@ export function ModeKey({ value, onChange }: { value: Mode; onChange: (m: Mode) 
     <div className="modekey" role="radiogroup" aria-label={t('home.mode')}>
       {Modes.map((m, i) => {
         const checked = m === value;
+        const ModeIcon = modeIcon[m];
         return (
           <button
             key={m}
@@ -43,11 +52,10 @@ export function ModeKey({ value, onChange }: { value: Mode; onChange: (m: Mode) 
             onClick={() => onChange(m)}
             onKeyDown={(e) => onKey(e, i)}
           >
-            <span className="modekey__letter" aria-hidden="true">
-              {modeLetter[m]}
+            <span className="modekey__icon">
+              <ModeIcon />
             </span>
             <span className="modekey__name">{t(`mode.${m}`)}</span>
-            {checked && <Biro draw key={m} tilt={-2} />}
           </button>
         );
       })}
