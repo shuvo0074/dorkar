@@ -21,6 +21,7 @@ import { ListingEntry } from '../features/catalog/ListingEntry';
 import { useFormat } from '../lib/format';
 import { useI18n } from '../lib/i18n';
 import { parseTaka, takaInput } from '../lib/money';
+import { FilterPanel } from '../components/ui/FilterPanel';
 
 const SORTS = ['newest', 'price_asc', 'price_desc'] as const;
 
@@ -144,10 +145,7 @@ function Filters({
   };
 
   return (
-    <section className="panel filters" aria-labelledby="filters-title">
-      <h2 id="filters-title" className="filters__title">
-        {t('listings.filters')}
-      </h2>
+    <FilterPanel titleId="filters-title" title={t('listings.filters')}>
       <form onSubmit={submit} noValidate>
         <Segmented
           legend={t('listings.kind')}
@@ -222,6 +220,6 @@ function Filters({
           </button>
         </div>
       </form>
-    </section>
+    </FilterPanel>
   );
 }

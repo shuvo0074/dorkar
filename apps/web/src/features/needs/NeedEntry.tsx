@@ -1,26 +1,14 @@
 import type { NeedMode } from '@dorkar/contracts';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
-import {
-  BagGlyph,
-  CrateGlyph,
-  KeyGlyph,
-  LadderGlyph,
-  PersonGlyph,
-} from '../../components/glyphs/glyphs';
 import { useFormat } from '../../lib/format';
 import { useI18n } from '../../lib/i18n';
 import type { Money } from '../../lib/money';
+import { modeIcon } from './ModeKey';
 import { needCode } from './modes';
 
-/** Until categories carry their own etchings, each mode has one stamp. */
-export const modeGlyph: Record<NeedMode, () => ReactNode> = {
-  BUY: BagGlyph,
-  RENT: KeyGlyph,
-  BORROW: LadderGlyph,
-  HIRE: PersonGlyph,
-  SOURCE: CrateGlyph,
-};
+/** Until categories carry their own icons, each mode has one. */
+export const modeGlyph: Record<NeedMode, () => ReactNode> = modeIcon;
 
 export interface EntryNeed {
   id: string;
@@ -31,11 +19,11 @@ export interface EntryNeed {
   district?: string;
 }
 
-/** One need as a catalog square: stamp, code, headline, place and budget. */
+/** One need as a row: mode tile, code, headline, place and budget. */
 export function NeedEntry({ need }: { need: EntryNeed }) {
   const { t } = useI18n();
   const f = useFormat();
-  const Glyph = modeGlyph[need.mode];
+  const ModeIcon = modeIcon[need.mode];
   const district = need.location?.district ?? need.district;
   const meta = [
     district && f.district(district),
@@ -46,8 +34,8 @@ export function NeedEntry({ need }: { need: EntryNeed }) {
   return (
     <li className="entry">
       <Link to={`/needs/${need.id}`} className="entry__link">
-        <div className="entry__art">
-          <Glyph />
+        <div className="entry__art" data-mode={need.mode}>
+          <ModeIcon />
         </div>
         <span className="entry__code code">{needCode(need)}</span>
         <span className="entry__title">{need.title}</span>

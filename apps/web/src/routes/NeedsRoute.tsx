@@ -15,6 +15,7 @@ import { needsApi, type NeedSearch } from '../features/needs/api';
 import { NeedEntry } from '../features/needs/NeedEntry';
 import { useI18n } from '../lib/i18n';
 import { parseTaka, takaInput } from '../lib/money';
+import { FilterPanel } from '../components/ui/FilterPanel';
 
 /** Filters live in the URL, so a search can be shared or bookmarked. */
 function readSearch(p: URLSearchParams): NeedSearch {
@@ -122,10 +123,7 @@ function Filters({ search, onApply }: { search: NeedSearch; onApply: (s: NeedSea
   };
 
   return (
-    <section className="panel filters" aria-labelledby="filters-title">
-      <h2 id="filters-title" className="filters__title">
-        {t('feed.filters')}
-      </h2>
+    <FilterPanel titleId="filters-title" title={t('feed.filters')}>
       <form onSubmit={submit} noValidate>
         <Segmented
           legend={t('feed.mode')}
@@ -182,6 +180,6 @@ function Filters({ search, onApply }: { search: NeedSearch; onApply: (s: NeedSea
           </button>
         </div>
       </form>
-    </section>
+    </FilterPanel>
   );
 }

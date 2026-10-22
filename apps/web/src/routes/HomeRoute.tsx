@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { BagGlyph, CatalogIcon, GavelGlyph, LadderGlyph } from '../components/glyphs/glyphs';
+import { GavelIcon, GridIcon, HandIcon, ListIcon } from '../components/icons/icons';
 import { Biro } from '../components/ui/Biro';
 import { needsApi } from '../features/needs/api';
 import { Composer } from '../features/needs/Composer';
@@ -20,70 +20,83 @@ export default function HomeRoute() {
 
   return (
     <div className="home">
-      <section aria-labelledby="home-title">
+      <section className="hero" aria-labelledby="home-title">
+        <p className="hero__kicker">{t('brand.tagline')}</p>
         <h1 id="home-title" className="home__title" tabIndex={-1}>
           {t('home.title')}
         </h1>
-        <p className="home__lede">{t('home.lede')}</p>
-        <Composer />
-        <nav className="home__browse" aria-label={t('home.browseAll')}>
-          <ul className="browselinks">
-            <li>
-              <Link to="/needs">
-                <BagGlyph />
-                {t('feed.title')}
-              </Link>
-            </li>
-            <li>
-              <Link to="/listings">
-                <CatalogIcon />
-                {t('nav.listings')}
-              </Link>
-            </li>
-            <li>
-              <Link to="/lend">
-                <LadderGlyph />
-                {t('nav.lend')}
-              </Link>
-            </li>
-            <li>
-              <Link to="/auctions">
-                <GavelGlyph />
-                {t('nav.auctions')}
-              </Link>
-            </li>
-          </ul>
-        </nav>
       </section>
 
+      <section className="home__post card" aria-label={t('nav.post')}>
+        <p className="home__lede">{t('home.lede')}</p>
+        <Composer />
+      </section>
+
+      <nav className="home__browse" aria-label={t('home.browseAll')}>
+        <ul className="browselinks">
+          <li>
+            <Link to="/needs">
+              <span className="browselinks__icon">
+                <ListIcon />
+              </span>
+              {t('feed.title')}
+            </Link>
+          </li>
+          <li>
+            <Link to="/listings">
+              <span className="browselinks__icon">
+                <GridIcon />
+              </span>
+              {t('nav.listings')}
+            </Link>
+          </li>
+          <li>
+            <Link to="/lend">
+              <span className="browselinks__icon">
+                <HandIcon />
+              </span>
+              {t('nav.lend')}
+            </Link>
+          </li>
+          <li>
+            <Link to="/auctions">
+              <span className="browselinks__icon">
+                <GavelIcon />
+              </span>
+              {t('nav.auctions')}
+            </Link>
+          </li>
+        </ul>
+      </nav>
+
       {real ? (
-        <section className="home__catalog" aria-labelledby="latest-title">
+        <section className="home__catalog card" aria-labelledby="latest-title">
           <div className="section-head">
             <h2 id="latest-title">{t('feed.latest')}</h2>
             <p>
               <Link to="/needs">{t('feed.seeAll')}</Link>
             </p>
           </div>
-          <ul className="catalog">
+          <ul className="catalog catalog--rows">
             {real.map((n) => (
               <NeedEntry key={n.id} need={n} />
             ))}
           </ul>
         </section>
       ) : (
-        <section className="home__catalog" aria-labelledby="examples-title">
+        <section className="home__catalog card" aria-labelledby="examples-title">
           <div className="section-head">
             <h2 id="examples-title">{t('examples.title')}</h2>
             <p>{t('examples.note')}</p>
           </div>
-          <ul className="catalog">
+          <ul className="catalog catalog--rows">
             {exampleNeeds.map((e) => {
               const copy = e[lang];
               return (
                 <li key={exampleCode(e)} className="entry">
                   <div className="entry__art">
                     {e.glyph}
-                    {e.circled && <Biro tilt={e.n % 2 ? -4 : 3} />}
+                    {e.circled && <Biro />}
                   </div>
                   <span className="entry__code code">{exampleCode(e)}</span>
                   <span className="entry__title">{copy.title}</span>
@@ -95,7 +108,7 @@ export default function HomeRoute() {
         </section>
       )}
 
-      <section aria-labelledby="how-title">
+      <section className="home__how" aria-labelledby="how-title">
         <div className="section-head">
           <h2 id="how-title">{t('how.title')}</h2>
         </div>

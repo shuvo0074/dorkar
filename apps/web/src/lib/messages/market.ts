@@ -10,6 +10,8 @@ export const market = {
   'common.none': 'Nothing here yet.',
   'common.optional': 'optional',
   'common.any': 'Any',
+  'common.showFilters': 'Show filters',
+  'common.hideFilters': 'Hide filters',
   'common.search': 'Search',
   'common.clear': 'Clear',
   'common.yes': 'Yes',

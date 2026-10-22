@@ -1,8 +1,7 @@
 /**
- * Postage-stamp drawings in one etching hand: 48-unit plate, heavy contour (2), lighter detail
- * (1.3) and hatch shading (0.8). Catalog plates pass through the shared `#ink-print` filter
- * (see InkDefs) so lines wobble and wear like newsprint ink. Decorative (aria-hidden): the
- * surrounding text names the thing.
+ * Item drawings on a 48-unit plate: contour, lighter detail and hatch shading (the stylesheet
+ * hides the hatching, so they read as clean line icons in tinted tiles). Decorative
+ * (aria-hidden): the surrounding text names the thing.
  */
 import type { ReactNode, SVGProps } from 'react';
 
@@ -18,33 +17,6 @@ function Glyph({ children, ...rest }: { children: ReactNode } & SVGProps<SVGSVGE
 const H = ({ d }: { d: string }) => <path className="hatch" d={d} />;
 /** Secondary detail line. */
 const L = (props: SVGProps<SVGPathElement>) => <path className="detail" {...props} />;
-
-/** Shared filter defs, rendered once by the app shell. */
-export function InkDefs() {
-  return (
-    <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true" focusable="false">
-      <filter id="ink-print" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="7" result="n" />
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="n"
-          scale="1.3"
-          xChannelSelector="R"
-          yChannelSelector="G"
-          result="d"
-        />
-        <feTurbulence type="fractalNoise" baseFrequency="1.6" numOctaves="1" seed="2" result="w" />
-        <feColorMatrix
-          in="w"
-          type="matrix"
-          values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -9 0 0 0 7.4"
-          result="wear"
-        />
-        <feComposite in="d" in2="wear" operator="in" />
-      </filter>
-    </svg>
-  );
-}
 
 export const PhoneGlyph = () => (
   <Glyph>
@@ -246,49 +218,6 @@ export const ScalesGlyph = () => (
     <L d="M3.5 26a5.5 3.5 0 0 0 11 0M33.5 26a5.5 3.5 0 0 0 11 0" />
     <circle className="fill" cx="24" cy="6" r="1.6" />
     <H d="M5.5 28.2h7M34.5 28.2h8M19 38.5h10M17 44h14" />
-  </Glyph>
-);
-
-/* Navigation set: same hand, plus a dot that fills on the current route. */
-export const CatalogIcon = () => (
-  <Glyph>
-    <path d="M8 8h13v13H8zM27 8h13v13H27zM8 27h13v13H8zM27 27h13v13H27z" />
-    <circle className="navdot" cx="33.5" cy="33.5" r="3" />
-  </Glyph>
-);
-
-export const PenIcon = () => (
-  <Glyph>
-    <path d="M32.5 7.5l8 8L18 38l-10 2 2-10z" />
-    <path d="M28 12l8 8" />
-    <circle className="navdot" cx="11" cy="11" r="3" />
-  </Glyph>
-);
-
-export const PersonIcon = () => (
-  <Glyph>
-    <circle cx="24" cy="15.5" r="7" />
-    <path d="M10.5 41c.6-8.3 6.4-13.5 13.5-13.5S36.9 32.7 37.5 41" />
-    <circle className="navdot" cx="38" cy="10" r="3" />
-  </Glyph>
-);
-
-/** Ledger sheet with tally bars: the personal dashboard. */
-export const TallyIcon = () => (
-  <Glyph>
-    <path d="M9 6.5h30v35H9z" />
-    <path d="M15 34V24M22 34V17M29 34V27" strokeWidth="2.6" />
-    <path d="M13 37.5h22" />
-    <circle className="navdot" cx="36" cy="12" r="3" />
-  </Glyph>
-);
-
-/** An envelope: the inbox. */
-export const InboxIcon = () => (
-  <Glyph>
-    <path d="M6 12.5h36v24H6z" />
-    <path d="M6 12.5l18 14 18-14" />
-    <circle className="navdot" cx="38" cy="9" r="3" />
   </Glyph>
 );
 

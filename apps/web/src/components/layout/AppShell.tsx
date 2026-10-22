@@ -4,9 +4,13 @@ import { useIsStaff } from '../../features/desk/tools';
 import { useSession } from '../../features/auth/session';
 import { useUnread } from '../../features/notifications/useUnread';
 import { useI18n } from '../../lib/i18n';
-import { CatalogIcon, InboxIcon, InkDefs, PenIcon, PersonIcon, TallyIcon } from '../glyphs/glyphs';
+import { BellIcon, ChartIcon, HomeIcon, PlusIcon, UserIcon } from '../icons/icons';
 
-/** Masthead, navigation (top on wide screens, thumb bar on phones), footer, route focus. */
+/**
+ * Green app bar (wordmark, top navigation on wide screens), page body, footer, and the thumb
+ * tab bar on phones with Post raised in the middle. Moves focus to the page heading on route
+ * change.
+ */
 export function AppShell() {
   const { t, lang, setLang, num } = useI18n();
   const { status } = useSession();
@@ -44,35 +48,26 @@ export function AppShell() {
       {t('lang.other')}
     </button>
   );
+  const focusComposer = () =>
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('#post textarea')?.focus());
 
   return (
     <>
-      <InkDefs />
       <a className="skip-link" href="#main">
         {t('skip')}
       </a>
-      <div className="shell">
-        <header className="masthead">
+      <header className="appbar">
+        <div className="appbar__in">
           <Link
             to="/"
             className="wordmark"
             aria-label={`${t('brand.latin')} — ${t('nav.catalog')}`}
           >
-            <span>{t('brand.latin')}</span>
-            <span className="wordmark__bar" aria-hidden="true" />
+            <span className="wordmark__latin">{t('brand.latin').toLowerCase()}</span>
             <span className="wordmark__bn" lang="bn">
               {t('brand.bangla')}
             </span>
           </Link>
-          <p className="masthead__tag">
-            {t('brand.tagline')
-              .split(/(?<=[.।])\s+/)
-              .map((part, i) => (
-                <span key={i} className="masthead__line">
-                  {part}
-                </span>
-              ))}
-          </p>
           <nav className="topnav" aria-label={t('nav.main')}>
             <NavLink to="/" end>
               {t('nav.catalog')}
@@ -90,12 +85,17 @@ export function AppShell() {
             {signedIn && <NavLink to="/messages">{t('nav.messages')}</NavLink>}
             {signedIn && <NavLink to="/dashboard">{t('nav.dashboard')}</NavLink>}
             {signedIn && isStaff && <NavLink to="/desk">{t('nav.desk')}</NavLink>}
-            <NavLink to={accountTo}>{accountLabel}</NavLink>
-            {toggle}
           </nav>
-          <div className="mobile-only">{toggle}</div>
-        </header>
+          <div className="appbar__actions">
+            {toggle}
+            <NavLink to={accountTo} className="appbar__account">
+              {accountLabel}
+            </NavLink>
+          </div>
+        </div>
+      </header>
 
+      <div className="shell">
         <main id="main">
           <Suspense fallback={<p className="route-loading">{t('loading')}</p>}>
             <Outlet />
@@ -110,40 +110,39 @@ export function AppShell() {
         </footer>
       </div>
 
-      <nav className={signedIn ? 'bottomnav bottomnav--5' : 'bottomnav'} aria-label={t('nav.main')}>
+      <nav className="tabbar" aria-label={t('nav.main')}>
         <NavLink to="/" end>
-          <CatalogIcon />
-          {t('nav.catalog')}
+          <HomeIcon />
+          <span>{t('nav.catalog')}</span>
         </NavLink>
-        <Link
-          to="/#post"
-          onClick={() =>
-            requestAnimationFrame(() =>
-              document.querySelector<HTMLElement>('#post textarea')?.focus(),
-            )
-          }
-        >
-          <PenIcon />
-          {t('nav.post')}
-        </Link>
-        {signedIn && (
+        {signedIn ? (
           <NavLink to="/inbox" aria-label={inboxLabel}>
             <span className="navicon">
-              <InboxIcon />
+              <BellIcon />
               {count}
             </span>
-            {t('nav.inbox')}
+            <span>{t('nav.inbox')}</span>
           </NavLink>
+        ) : (
+          <span className="tabbar__gap" aria-hidden="true" />
         )}
-        {signedIn && (
+        <Link to="/#post" className="tabbar__post" onClick={focusComposer}>
+          <span className="tabbar__plus">
+            <PlusIcon />
+          </span>
+          <span>{t('nav.postShort')}</span>
+        </Link>
+        {signedIn ? (
           <NavLink to="/dashboard">
-            <TallyIcon />
-            {t('nav.dashboard')}
+            <ChartIcon />
+            <span>{t('nav.dashboard')}</span>
           </NavLink>
+        ) : (
+          <span className="tabbar__gap" aria-hidden="true" />
         )}
         <NavLink to={accountTo}>
-          <PersonIcon />
-          {accountLabel}
+          <UserIcon />
+          <span>{accountLabel}</span>
         </NavLink>
       </nav>
     </>

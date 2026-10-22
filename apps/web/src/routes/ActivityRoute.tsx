@@ -13,6 +13,7 @@ import {
 import { shortCode, useFormat } from '../features/dashboard/format';
 import { errorMessage } from '../lib/errors';
 import { useI18n } from '../lib/i18n';
+import { FilterPanel } from '../components/ui/FilterPanel';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -160,10 +161,7 @@ function Filters({
   };
 
   return (
-    <section className="panel filters" aria-labelledby="filters-title">
-      <h2 id="filters-title" className="filters__title">
-        {t('log.filters')}
-      </h2>
+    <FilterPanel titleId="filters-title" title={t('log.filters')}>
       <form onSubmit={submit} noValidate>
         <div className="filters__grid">
           <Select
@@ -276,7 +274,7 @@ function Filters({
           </p>
         )}
       </form>
-    </section>
+    </FilterPanel>
   );
 }
 
