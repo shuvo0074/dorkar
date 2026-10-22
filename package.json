@@ -20,7 +20,8 @@
     "dev:setup": "node scripts/dev-setup.mjs",
     "dev:backend": "node scripts/dev-backend.mjs",
     "e2e:backend": "node scripts/e2e-backend.mjs",
-    "e2e:phase2": "node scripts/e2e-phase2.mjs"
+    "e2e:phase2": "node scripts/e2e-phase2.mjs",
+    "seed:demo": "node scripts/seed-demo.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

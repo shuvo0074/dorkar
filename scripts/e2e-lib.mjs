@@ -38,8 +38,12 @@ export const rateLimitWaits = () => rateLimitedWaits;
  * One request through the gateway. Like a well-behaved client, it waits out a short 429
  * (the gateway allows 300 requests per minute per IP; polling for events adds up).
  */
-export async function api(method, path, { token, body, idem, accept = 'application/json' } = {}) {
-  const headers = { accept };
+export async function api(
+  method,
+  path,
+  { token, body, idem, accept = 'application/json', headers: extra } = {},
+) {
+  const headers = { accept, ...extra };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (token) headers.authorization = `Bearer ${token}`;
   if (idem) headers['idempotency-key'] = idem;
@@ -118,17 +122,21 @@ async function resetOtpIpLimits() {
 }
 
 /** Retries once after clearing the per-IP OTP limit when identity answers 429. */
-async function otpCall(path, body) {
-  let r = await api('POST', path, { body });
+async function otpCall(path, body, headers) {
+  let r = await api('POST', path, { body, headers });
   if (r.status === 429 && r.body?.error?.code === 'RATE_LIMITED') {
     await resetOtpIpLimits();
-    r = await api('POST', path, { body });
+    r = await api('POST', path, { body, headers });
   }
   return r;
 }
 
-/** Phone + OTP sign-in. Pass `p` to sign in again as an existing number. */
-export async function signIn(label, p = phone()) {
+/**
+ * Phone + OTP sign-in. Pass `p` to sign in again as an existing number; `native` signs in as the
+ * mobile app does, so the refresh token comes back in the body (`refreshToken`).
+ */
+export async function signIn(label, p = phone(), { native = false } = {}) {
+  const headers = native ? { 'x-client': 'mobile' } : undefined;
   const e164 = `+880${p.slice(1)}`;
   const smsTo = () => {
     let text = '';
@@ -155,19 +163,29 @@ export async function signIn(label, p = phone()) {
     return sms.length > before && /code is (\d{6})/.exec(sms.at(-1).text)?.[1];
   });
   const r = await expectStatus(
-    otpCall('/api/v1/auth/verify-otp', {
-      challengeId: req.data.challengeId,
-      code,
-      device: {
-        key: randomBytes(32).toString('base64url'),
-        platform: 'web',
-        label: `e2e ${label}`,
+    otpCall(
+      '/api/v1/auth/verify-otp',
+      {
+        challengeId: req.data.challengeId,
+        code,
+        device: {
+          key: randomBytes(32).toString('base64url'),
+          platform: 'web',
+          label: `e2e ${label}`,
+        },
       },
-    }),
+      headers,
+    ),
     200,
     `${label} verify-otp`,
   );
-  return { token: r.data.accessToken, id: r.data.account.id, phone: p, label };
+  return {
+    token: r.data.accessToken,
+    refreshToken: r.data.refreshToken,
+    id: r.data.account.id,
+    phone: p,
+    label,
+  };
 }
 
 /** A business profile plus seller capabilities, as the MVP seller sets up. */
