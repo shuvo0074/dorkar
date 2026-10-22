@@ -1225,6 +1225,68 @@ p {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+/* Linked tally: the label's link stretches over the whole cell. */
+.tally--links .tally__cell {
+  position: relative;
+}
+.tally--links .tally__cell:hover {
+  background: var(--paper-shade);
+}
+.tally--links dt a {
+  color: inherit;
+  text-decoration: none;
+}
+.tally--links dt a::after {
+  content: ' →';
+}
+.tally--links dt a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.tally--links dt a:focus-visible {
+  outline: none;
+}
+.tally--links .tally__cell:has(a:focus-visible) {
+  outline: 2.5px solid var(--biro);
+  outline-offset: -2px;
+}
+
+.section-head__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 14px;
+}
+
+/* Folded per-status counts. */
+.breakdown {
+  margin-top: 18px;
+}
+.breakdown summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 700;
+}
+.breakdown .desk__sub:first-of-type {
+  margin-top: 6px;
+}
+
+.dash__shortcuts ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dash__shortcuts li {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
 
 /* Facts: a definition list in the member-card style. */
 .facts {
@@ -1526,6 +1588,7 @@ p {
   .dash > header,
   .dash > .tally,
   .dash > .dash__activity,
+  .dash > .dash__shortcuts,
   .desk > header,
   .desk > .desk__chart {
     grid-column: 1 / -1;

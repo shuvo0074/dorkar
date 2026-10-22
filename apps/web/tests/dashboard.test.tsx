@@ -70,7 +70,12 @@ describe('personal dashboard', () => {
     renderApp('/dashboard');
     expect(await screen.findByRole('heading', { level: 1, name: 'Your dashboard' })).toBeVisible();
     // In progress = everything not final: 1 (buyer CONFIRMED) + 1 (seller HANDED_OVER).
-    expect((await screen.findByText('Deals in progress')).nextSibling).toHaveTextContent('2');
+    const live = await screen.findByRole('link', { name: 'Deals in progress' });
+    expect(live).toHaveAttribute('href', '/deals');
+    expect(live.closest('.tally__cell')).toHaveTextContent('2');
+    // Per-status counts are folded away until asked for.
+    expect(screen.getAllByText('By status')[0]!.closest('details')).not.toHaveAttribute('open');
+    expect(screen.getByRole('link', { name: 'See all' })).toHaveAttribute('href', '/my/auctions');
     expect(screen.getAllByText('৳78,000').length).toBeGreaterThan(0);
     expect(screen.getByText('4.8 out of 5 from 8 reviews')).toBeInTheDocument();
     expect(screen.getByText('Auction A-0A1B2C')).toBeInTheDocument();

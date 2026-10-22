@@ -22,6 +22,18 @@ export default function DashboardRoute() {
   );
 }
 
+/** Every place the dashboard points to, for the shortcuts at the foot of the page. */
+const SHORTCUTS = [
+  ['/my/needs', 'myNeeds.title'],
+  ['/my/offers', 'myOffers.title'],
+  ['/my/listings', 'myListings.title'],
+  ['/deals', 'nav.deals'],
+  ['/my/auctions', 'dash.auctions'],
+  ['/bookings', 'dash.bookings'],
+  ['/loans', 'dash.loans'],
+  ['/disputes', 'dash.disputes'],
+] as const;
+
 function Dashboard() {
   const { t } = useI18n();
   const isStaff = useIsStaff();
@@ -32,43 +44,28 @@ function Dashboard() {
       <header className="desk__head">
         <h1 tabIndex={-1}>{t('dash.title')}</h1>
         <p className="desk__lede">{t('dash.lede')}</p>
-        <nav className="desk__meta shortcuts" aria-label={t('dash.shortcuts')}>
-          <Link className="btn btn--outline btn--small" to="/my/needs">
-            {t('myNeeds.title')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/my/offers">
-            {t('myOffers.title')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/my/listings">
-            {t('myListings.title')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/deals">
-            {t('nav.deals')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/my/auctions">
-            {t('dash.auctions')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/bookings">
-            {t('dash.bookings')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/loans">
-            {t('dash.loans')}
-          </Link>
-          <Link className="btn btn--outline btn--small" to="/disputes">
-            {t('dash.disputes')}
-          </Link>
-          {isStaff && (
-            <Link className="btn btn--outline btn--small" to="/desk">
-              {t('dash.staffLink')}
-            </Link>
-          )}
-        </nav>
+        {isStaff && (
+          <p className="desk__meta">
+            <Link to="/desk">{t('dash.staffLink')}</Link>
+          </p>
+        )}
       </header>
 
       {dash.isPending && <LedgerSkeleton rows={4} />}
       {dash.isError && <LoadError onRetry={() => void dash.refetch()} />}
       {dash.data && <Overview d={dash.data} />}
       <MyActivity />
+
+      <nav className="dash__shortcuts" aria-label={t('dash.shortcuts')}>
+        <h2 className="desk__sub">{t('dash.shortcuts')}</h2>
+        <ul>
+          {SHORTCUTS.map(([to, label]) => (
+            <li key={to}>
+              <Link to={to}>{t(label)}</Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }
@@ -80,57 +77,47 @@ function Overview({ d }: { d: PersonalDashboard }) {
 
   return (
     <>
-      <dl className="tally tally--big" aria-label={t('dash.title')}>
-        <div className="tally__cell">
-          <dt>{t('dash.figure.openNeeds')}</dt>
-          <dd>{num(d.buyer.openNeeds)}</dd>
-        </div>
-        <div className="tally__cell">
-          <dt>{t('dash.figure.waiting')}</dt>
-          <dd>
-            {/* The one figure that asks for action gets the pen. */}
-            {d.buyer.offersAwaitingResponse > 0 ? (
-              <span className="tally__mark">
-                {num(d.buyer.offersAwaitingResponse)}
-                <Biro draw tilt={-5} />
-              </span>
-            ) : (
-              num(0)
-            )}
-          </dd>
-        </div>
-        <div className="tally__cell">
-          <dt>{t('dash.figure.live')}</dt>
-          <dd>{num(live)}</dd>
-        </div>
-        <div className="tally__cell">
-          <dt>{t('dash.figure.earned')}</dt>
-          <dd>{f.taka(d.seller.earnings)}</dd>
-        </div>
+      {/* The four figures that matter, each a way into the page that acts on it. */}
+      <dl className="tally tally--big tally--links" aria-label={t('dash.title')}>
+        <Figure to="/my/needs" label={t('dash.figure.waiting')}>
+          {/* The one figure that asks for action gets the pen. */}
+          {d.buyer.offersAwaitingResponse > 0 ? (
+            <span className="tally__mark">
+              {num(d.buyer.offersAwaitingResponse)}
+              <Biro draw tilt={-5} />
+            </span>
+          ) : (
+            num(0)
+          )}
+        </Figure>
+        <Figure to="/my/needs" label={t('dash.figure.openNeeds')}>
+          {num(d.buyer.openNeeds)}
+        </Figure>
+        <Figure to="/deals" label={t('dash.figure.live')}>
+          {num(live)}
+        </Figure>
+        <Figure to="/deals" label={t('dash.figure.earned')}>
+          {f.taka(d.seller.earnings)}
+        </Figure>
       </dl>
 
       <section aria-labelledby="buyer-title">
-        <div className="section-head">
-          <h2 id="buyer-title">{t('dash.buyer')}</h2>
-        </div>
+        <SectionHead id="buyer-title" title={t('dash.buyer')}>
+          <Link to="/my/needs">{t('myNeeds.title')}</Link>
+        </SectionHead>
         <dl className="facts">
-          <dt>{t('dash.figure.openNeeds')}</dt>
-          <dd>{num(d.buyer.openNeeds)}</dd>
-          <dt>{t('dash.figure.waiting')}</dt>
-          <dd>{num(d.buyer.offersAwaitingResponse)}</dd>
           <dt>{t('dash.spent')}</dt>
           <dd>{f.taka(d.buyer.totalSpent)}</dd>
         </dl>
-        <Counts title={t('dash.deals')} counts={d.buyer.transactionsByState} />
+        <Breakdown groups={[[t('dash.deals'), d.buyer.transactionsByState]]} />
       </section>
 
       <section aria-labelledby="seller-title">
-        <div className="section-head">
-          <h2 id="seller-title">{t('dash.seller')}</h2>
-        </div>
+        <SectionHead id="seller-title" title={t('dash.seller')}>
+          <Link to="/my/offers">{t('myOffers.title')}</Link>
+          <Link to="/my/listings">{t('myListings.title')}</Link>
+        </SectionHead>
         <dl className="facts">
-          <dt>{t('dash.earnings')}</dt>
-          <dd>{f.taka(d.seller.earnings)}</dd>
           <dt>{t('dash.rating')}</dt>
           <dd>
             {d.seller.rating && d.seller.rating.average !== null
@@ -146,8 +133,12 @@ function Overview({ d }: { d: PersonalDashboard }) {
             )}
           </dd>
         </dl>
-        <Counts title={t('dash.offers')} counts={d.seller.offersByStatus} />
-        <Counts title={t('dash.deals')} counts={d.seller.transactionsByState} />
+        <Breakdown
+          groups={[
+            [t('dash.offers'), d.seller.offersByStatus],
+            [t('dash.deals'), d.seller.transactionsByState],
+          ]}
+        />
       </section>
 
       {(d.auctions.owned > 0 || d.auctions.bidding > 0 || d.auctions.live.length > 0) && (
@@ -155,6 +146,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           id="auctions"
           title={t('dash.auctions')}
           note={t('dash.auctions.note', { owned: d.auctions.owned, bidding: d.auctions.bidding })}
+          more="/my/auctions"
           rows={d.auctions.live.map((a) => ({
             key: a.auctionId,
             href: `/auctions/${a.auctionId}`,
@@ -170,6 +162,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           id="bookings"
           title={t('dash.bookings')}
           note={t('dash.bookings.note', { renter: d.bookings.asRenter, owner: d.bookings.asOwner })}
+          more="/bookings"
           rows={d.bookings.items.map((b) => ({
             key: b.bookingId,
             href: `/bookings/${b.bookingId}`,
@@ -191,6 +184,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           id="loans"
           title={t('dash.loans')}
           note={t('dash.loans.note', { lender: d.loans.asLender, borrower: d.loans.asBorrower })}
+          more="/loans"
           rows={d.loans.items.map((l) => ({
             key: l.loanId,
             href: `/loans/${l.loanId}`,
@@ -210,6 +204,7 @@ function Overview({ d }: { d: PersonalDashboard }) {
           id="disputes"
           title={t('dash.disputes')}
           note={t('dash.disputes.note', { n: d.disputes.open })}
+          more="/disputes"
           rows={d.disputes.items.map((x) => ({
             key: x.disputeId,
             href: `/disputes/${x.disputeId}`,
@@ -220,6 +215,41 @@ function Overview({ d }: { d: PersonalDashboard }) {
         />
       )}
     </>
+  );
+}
+
+/** A tally cell whose whole face links to the page behind the figure. */
+function Figure({ to, label, children }: { to: string; label: string; children: ReactNode }) {
+  return (
+    <div className="tally__cell">
+      <dt>
+        <Link to={to}>{label}</Link>
+      </dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+function SectionHead({ id, title, children }: { id: string; title: string; children: ReactNode }) {
+  return (
+    <div className="section-head">
+      <h2 id={id}>{title}</h2>
+      <p className="section-head__links">{children}</p>
+    </div>
+  );
+}
+
+/** Per-status counts, folded away: the totals above answer most visits. Hidden when empty. */
+function Breakdown({ groups }: { groups: Array<[string, Record<string, number>]> }) {
+  const { t } = useI18n();
+  if (!groups.some(([, counts]) => Object.values(counts).some((n) => n > 0))) return null;
+  return (
+    <details className="breakdown">
+      <summary>{t('dash.byStatus')}</summary>
+      {groups.map(([title, counts]) => (
+        <Counts key={title} title={title} counts={counts} />
+      ))}
+    </details>
   );
 }
 
@@ -248,11 +278,13 @@ function Ledger({
   id,
   title,
   note,
+  more,
   rows,
 }: {
   id: string;
   title: string;
   note: string;
+  more: string;
   rows: Array<{
     key: string;
     href: string;
@@ -266,7 +298,9 @@ function Ledger({
     <section aria-labelledby={`${id}-title`}>
       <div className="section-head">
         <h2 id={`${id}-title`}>{title}</h2>
-        <p>{note}</p>
+        <p>
+          {note} · <Link to={more}>{t('dash.seeAll')}</Link>
+        </p>
       </div>
       {rows.length === 0 ? (
         <p className="muted">{t('dash.none')}</p>

@@ -158,6 +158,8 @@ export const core = {
   'dash.more': 'Show more',
   'dash.staffLink': 'Open the desk',
   'dash.shortcuts': 'Your marketplace',
+  'dash.seeAll': 'See all',
+  'dash.byStatus': 'By status',
   'state.CREATED': 'Created',
   'state.CONFIRMED': 'Confirmed',
   'state.DELIVERY_PENDING': 'Delivery pending',

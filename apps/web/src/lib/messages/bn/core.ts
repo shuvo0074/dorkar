@@ -159,6 +159,8 @@ export const core: Record<keyof typeof en, string> = {
   'dash.more': 'আরও দেখুন',
   'dash.staffLink': 'ডেস্ক খুলুন',
   'dash.shortcuts': 'আপনার বাজার',
+  'dash.seeAll': 'সব দেখুন',
+  'dash.byStatus': 'অবস্থা অনুযায়ী',
   'state.CREATED': 'তৈরি',
   'state.CONFIRMED': 'নিশ্চিত',
   'state.DELIVERY_PENDING': 'ডেলিভারি বাকি',
