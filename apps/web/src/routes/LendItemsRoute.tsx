@@ -9,6 +9,7 @@ import { itemCode, lendingApi, type LendItem } from '../features/lending/api';
 import { MediaImage } from '../features/media/Photos';
 import { useFormat } from '../lib/format';
 import { useI18n } from '../lib/i18n';
+import { FilterPanel } from '../components/ui/FilterPanel';
 
 export function LendEntry({ item }: { item: LendItem }) {
   const { t } = useI18n();
@@ -68,10 +69,7 @@ export default function LendItemsRoute() {
           </Link>
         </div>
       </header>
-      <section className="panel filters" aria-labelledby="lend-filters">
-        <h2 id="lend-filters" className="filters__title">
-          {t('feed.filters')}
-        </h2>
+      <FilterPanel titleId="lend-filters" title={t('feed.filters')}>
         <form onSubmit={submit} noValidate>
           <div className="filters__grid">
             <TextField
@@ -104,7 +102,7 @@ export default function LendItemsRoute() {
             </button>
           </div>
         </form>
-      </section>
+      </FilterPanel>
       <section aria-labelledby="lend-results" aria-busy={list.isFetching}>
         <div className="section-head">
           <h2 id="lend-results">{t('lend.title')}</h2>

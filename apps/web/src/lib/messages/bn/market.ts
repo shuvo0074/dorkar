@@ -11,6 +11,8 @@ export const market: Record<keyof typeof en, string> = {
   'common.none': 'এখানে এখনও কিছু নেই।',
   'common.optional': 'ঐচ্ছিক',
   'common.any': 'যেকোনো',
+  'common.showFilters': 'ফিল্টার দেখুন',
+  'common.hideFilters': 'ফিল্টার লুকান',
   'common.search': 'খুঁজুন',
   'common.clear': 'মুছুন',
   'common.yes': 'হ্যাঁ',
