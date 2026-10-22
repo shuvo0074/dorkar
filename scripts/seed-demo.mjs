@@ -1,11 +1,12 @@
-// Demo data for local development: sellers with published products, rentals and services, each
-// with real photos, created through the gateway like a real client (`pnpm dev:backend` must be
-// running). The data is in scripts/seed-demo/listings.mjs, the photos in scripts/seed-demo/photos.
+// Demo data for local development: sellers with published products, rentals and services (with
+// real photos), and buyers with open needs, created through the gateway like a real client
+// (`pnpm dev:backend` must be running). The data is in scripts/seed-demo/listings.mjs and
+// scripts/seed-demo/needs.mjs, the photos in scripts/seed-demo/photos.
 //
 //   pnpm seed:demo
 //
-// Idempotent: sellers sign in with fixed numbers, listings whose title already exists are skipped,
-// and a demo seller's listings that are no longer in the data are withdrawn.
+// Idempotent: demo users sign in with fixed numbers, listings and needs whose title already exists
+// are skipped, and demo listings and needs that are no longer in the data are withdrawn or closed.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ROOT } from './backend-services.mjs';
@@ -21,13 +22,15 @@ import {
   sleep,
 } from './e2e-lib.mjs';
 import { LISTINGS, SELLERS } from './seed-demo/listings.mjs';
+import { BUYERS, NEEDS } from './seed-demo/needs.mjs';
 
 const PHOTOS = resolve(ROOT, 'scripts/seed-demo/photos');
 const SESSIONS = resolve(ROOT, 'var/seed-demo-sessions.json');
 const LIVE = new Set(['DRAFT', 'PUBLISHED', 'PAUSED']);
+const LIVE_NEEDS = new Set(['DRAFT', 'OPEN', 'PAUSED']);
 
 /**
- * Signs a demo seller in, reusing the refresh token from the last run: the fixed numbers would
+ * Signs a demo user in, reusing the refresh token from the last run: the fixed numbers would
  * otherwise hit the per-phone OTP limit when the seed runs a few times in an hour.
  */
 async function session(s, sessions) {
@@ -185,6 +188,69 @@ async function createListing(user, s, l) {
   return kind;
 }
 
+const DAY = 86_400_000;
+/** `{ inDays, hour }` → a Dhaka date-time; `{ inDays }` → a date. */
+function when({ inDays, hour }) {
+  const day = new Date(Date.now() + inDays * DAY).toISOString().slice(0, 10);
+  return hour === undefined ? day : `${day}T${String(hour).padStart(2, '0')}:00:00+06:00`;
+}
+
+const resolveDates = (terms) =>
+  Object.fromEntries(
+    Object.entries(terms).map(([k, v]) => [
+      k,
+      v && typeof v === 'object' && 'inDays' in v ? when(v) : v,
+    ]),
+  );
+
+const taka = (n) => (n === undefined ? null : { amount: n * 100, currency: 'BDT' });
+
+async function myNeeds(user) {
+  const all = [];
+  let cursor;
+  do {
+    const q = `limit=50${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const page = await expectStatus(
+      api('GET', `/api/v1/me/needs?${q}`, { token: user.token }),
+      200,
+      `${user.label} my needs`,
+    );
+    all.push(...page.data);
+    cursor = page.page.nextCursor;
+  } while (cursor);
+  return all.filter((n) => LIVE_NEEDS.has(n.status));
+}
+
+async function postNeed(user, b, n) {
+  await expectStatus(
+    api('POST', '/api/v1/needs', {
+      token: user.token,
+      body: {
+        mode: n.mode,
+        categoryId: n.categoryId,
+        title: n.title,
+        description: n.description,
+        quantity: n.quantity ?? 1,
+        ...(n.budget && {
+          budget: {
+            min: taka(n.budget.min),
+            max: taka(n.budget.max),
+            flexible: n.budget.flexible,
+          },
+        }),
+        ...(n.condition && { condition: n.condition }),
+        attributes: n.attributes,
+        modeTerms: resolveDates(n.modeTerms),
+        location: { district: b.district, area: n.area },
+        deliveryPreference: n.delivery ?? 'EITHER',
+        publish: true,
+      },
+    }),
+    201,
+    `post need "${n.title}"`,
+  );
+}
+
 // ------------------------------------------------------------------------------------------------
 
 await requireGateway();
@@ -221,9 +287,46 @@ for (const [key, s] of Object.entries(SELLERS)) {
   }
 }
 
+let needsPosted = 0;
+let needsClosed = 0;
+for (const [key, b] of Object.entries(BUYERS)) {
+  const user = await session(b, sessions);
+  writeFileSync(SESSIONS, JSON.stringify(sessions, null, 2));
+  await expectStatus(
+    api('PATCH', '/api/v1/me/profile', {
+      token: user.token,
+      body: { displayName: b.displayName, userType: 'INDIVIDUAL', district: b.district },
+    }),
+    200,
+    `${b.displayName} profile`,
+  );
+  const mine = NEEDS.filter((n) => n.buyer === key);
+  const wanted = new Set(mine.map((n) => n.title));
+  const existing = await myNeeds(user);
+  log(`${b.displayName} (${b.phone}) signed in, ${b.district}`);
+
+  for (const n of existing.filter((x) => !wanted.has(x.title))) {
+    const r = await api('POST', `/api/v1/needs/${n.id}/close`, { token: user.token });
+    if (r.status === 200) needsClosed++;
+    else note(`could not close old need "${n.title}" (${r.status})`);
+  }
+
+  const have = new Set(existing.map((x) => x.title));
+  for (const n of mine) {
+    if (have.has(n.title)) {
+      skipped++;
+      continue;
+    }
+    await postNeed(user, b, n);
+    needsPosted++;
+    log(`need (${n.mode.toLowerCase()}): ${n.title}`);
+  }
+}
+
 if (withdrawn) note(`withdrew ${withdrawn} old demo listing(s) that are no longer in the data`);
-if (skipped) note(`${skipped} listing(s) already existed and were skipped`);
+if (needsClosed) note(`closed ${needsClosed} old demo need(s) that are no longer in the data`);
+if (skipped) note(`${skipped} listing(s) or need(s) already existed and were skipped`);
 console.log(
-  `\nCreated ${made.PRODUCT} product(s), ${made.RENTAL} rental(s), ${made.SERVICE} service(s); ` +
-    `${LISTINGS.length} demo listings in the data.`,
+  `\nCreated ${made.PRODUCT} product(s), ${made.RENTAL} rental(s), ${made.SERVICE} service(s) ` +
+    `and ${needsPosted} need(s); the data has ${LISTINGS.length} listings and ${NEEDS.length} needs.`,
 );

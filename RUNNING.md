@@ -46,9 +46,9 @@ tail -f var/dev-sms.log
 
 ## Optional
 
-### Seed demo listings
+### Seed demo data
 
-80 published listings with real photos from 8 demo sellers: 57 products, 10 rentals and 13 services (needs the backend running; works offline). Safe to re-run. Data and photos are in `scripts/seed-demo/`; sign in as a demo seller with numbers `01799000001` to `01799000008`.
+80 published listings with real photos from 8 demo sellers (57 products, 10 rentals, 13 services), and 19 open needs from 5 demo buyers that fill the homepage feed. Needs the backend running; works offline. Safe to re-run. Data and photos are in `scripts/seed-demo/`. Demo sellers sign in with `01799000001` to `01799000008`, demo buyers with `01899000001` to `01899000005`.
 
 ```bash
 pnpm seed:demo
