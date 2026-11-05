@@ -19,7 +19,7 @@ const layer = (name, forbidden) => ({
 });
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '.claude/**'] },
+  { ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '.claude/**', 'apps/mobile/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
   {

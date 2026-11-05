@@ -2,6 +2,8 @@ packages:
   - packages/*
   - services/*
   - apps/*
+  # React Native's native builds expect a flat node_modules: it has its own npm install.
+  - '!apps/mobile'
 
 onlyBuiltDependencies:
   - esbuild

@@ -125,3 +125,15 @@ components differ.
   event schemas load with the pages that validate.
 - Live data: the inbox count refreshes every minute, live auctions every ten seconds, and a
   conversation long-polls (`after` + `wait=8`) with a back-off when the server answers at once.
+
+## 7. As built (mobile)
+
+- `apps/mobile` is a React Native CLI app for iOS and Android, outside the pnpm workspace because
+  the native builds expect a flat `node_modules`. It covers the consumer marketplace; the staff
+  desk stays on the web.
+- It imports the web's typed API clients, message tables and pure helpers directly
+  (`@web/*` → `apps/web/src/*`). Metro swaps the browser-only modules (`lib/http`, `lib/i18n`,
+  `features/auth/session`, `features/media/api`) for native twins with the same exports.
+- Sessions use `X-Client: mobile`: the rotating refresh token comes back in the body and lives in
+  the platform keychain, the access token in memory.
+- Each design is one branch of the visual layer: `src/design/` plus its fonts and native identity.
