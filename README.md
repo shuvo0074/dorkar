@@ -31,7 +31,7 @@ Architecture, decisions and roadmap: [docs/README.md](docs/README.md). Rules for
 | `services/messaging-service`    | 4017 | Context-bound conversations, long-poll delivery, blocking; numbers stay private                                          |
 | `services/dashboard-service`    | 4018 | Admin dashboard: metrics, cross-service activity log; personal dashboard                                                 |
 | `apps/web`                      | 5173 | Web app (React + Vite): need composer, phone + OTP sign-in, account, dashboards; English and Bangla                      |
-| `apps/mobile`                   |      | Phone apps (React Native CLI, iOS + Android); reuses the web's API clients and message tables. See its README           |
+| `apps/mobile`                   |      | Phone apps (React Native CLI, iOS + Android); reuses the web's API clients and message tables. See its README            |
 | `infra/`                        |      | Docker Compose (generated), Postgres bootstrap, backup/restore scripts, k6 load tests                                    |
 
 ## Local development
