@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import {
   launchCamera,
   launchImageLibrary,
@@ -21,6 +21,15 @@ import { Alert, Row } from './Layout';
 import { Sheet } from './Dialog';
 import { MediaImage } from './Misc';
 import { T } from './Text';
+
+/** iOS reports JPEGs as "image/jpg", which the API rightly refuses: name it properly. */
+function photoType(type: string | undefined, name: string | undefined): string {
+  const t = (type ?? '').toLowerCase();
+  if (t === 'image/jpg' || t === 'image/pjpeg') return 'image/jpeg';
+  if (t) return t;
+  const ext = name?.split('.').pop()?.toLowerCase();
+  return ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+}
 
 /** Pick, upload and order photos for a listing, need, offer or lend item. */
 export function PhotoPicker({
@@ -64,12 +73,17 @@ export function PhotoPicker({
   const handle = (res: ImagePickerResponse) => {
     setChoosing(false);
     const files = (res.assets ?? []).flatMap((a) =>
-      a.uri && a.type ? [{ uri: a.uri, type: a.type, size: a.fileSize ?? 0 }] : [],
+      a.uri ? [{ uri: a.uri, type: photoType(a.type, a.fileName), size: a.fileSize ?? 0 }] : [],
     );
     if (files.length) {
       setProblem(null);
       upload.mutate(files);
     }
+  };
+  // iOS can't show the system picker while our sheet is still on screen: close it, then open.
+  const afterSheet = (open: () => Promise<ImagePickerResponse>) => {
+    setChoosing(false);
+    setTimeout(() => void open().then(handle), Platform.OS === 'ios' ? 500 : 0);
   };
   const room = max - value.length;
   return (
@@ -117,13 +131,15 @@ export function PhotoPicker({
           block
           label={t('photo.library')}
           onPress={() =>
-            void launchImageLibrary({
-              mediaType: 'photo',
-              selectionLimit: room,
-              quality: 0.8,
-              maxWidth: 2400,
-              maxHeight: 2400,
-            }).then(handle)
+            afterSheet(() =>
+              launchImageLibrary({
+                mediaType: 'photo',
+                selectionLimit: room,
+                quality: 0.8,
+                maxWidth: 2400,
+                maxHeight: 2400,
+              }),
+            )
           }
         />
         <Button
@@ -131,12 +147,14 @@ export function PhotoPicker({
           kind="outline"
           label={t('photo.camera')}
           onPress={() =>
-            void launchCamera({
-              mediaType: 'photo',
-              quality: 0.8,
-              maxWidth: 2400,
-              maxHeight: 2400,
-            }).then(handle)
+            afterSheet(() =>
+              launchCamera({
+                mediaType: 'photo',
+                quality: 0.8,
+                maxWidth: 2400,
+                maxHeight: 2400,
+              }),
+            )
           }
         />
       </Sheet>

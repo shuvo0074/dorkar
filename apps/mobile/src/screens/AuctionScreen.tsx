@@ -220,6 +220,7 @@ function Actions({ a }: { a: AuctionDetail }) {
       {a.actions.includes('BID') ? (
         <Stack>
           <MoneyField
+            testID="bid"
             label={t('auction.bidLabel')}
             hint={hint}
             value={amount}
