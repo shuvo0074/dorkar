@@ -1,5 +1,6 @@
 /** Words only the app needs, on top of the web's tables (same keys in both, typed in i18n.tsx). */
 export const nativeEn = {
+  'common.done': 'Done',
   'sessions.current': 'This phone',
   'common.filter': 'Type to filter',
   'common.back': 'Back',
@@ -9,6 +10,7 @@ export const nativeEn = {
 };
 
 export const nativeBn: Record<keyof typeof nativeEn, string> = {
+  'common.done': 'হয়ে গেছে',
   'sessions.current': 'এই ফোন',
   'common.filter': 'খুঁজতে লিখুন',
   'common.back': 'পেছনে',

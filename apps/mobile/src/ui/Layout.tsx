@@ -14,7 +14,7 @@ import { Backdrop } from '../design/Backdrop';
 import { c, cardEdge, elevation, r, space } from '../design/tokens';
 import { useI18n } from '../lib/i18n';
 import { Button } from './Button';
-import { AlertIcon } from './icons';
+import { AlertIcon, NoteIcon } from './icons';
 import { T } from './Text';
 
 /**
@@ -56,6 +56,7 @@ export function Screen({
           <ScrollView
             style={styles.flex}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             contentContainerStyle={[
               styles.content,
               { paddingBottom: (footer ? space.section : bottom) + space.section },
@@ -153,7 +154,7 @@ export function Alert({ message, tone = 'error' }: { message: string; tone?: 'er
       accessibilityRole="alert"
       style={[styles.alert, { backgroundColor: tone === 'error' ? c.redTint : c.brandTint }]}
     >
-      <AlertIcon color={fg} size={20} />
+      {tone === 'error' ? <AlertIcon color={fg} size={20} /> : <NoteIcon color={fg} size={20} />}
       <T v="small" color={tone === 'error' ? c.redInk : c.ink} style={styles.flexShrink}>
         {message}
       </T>

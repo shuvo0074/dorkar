@@ -1,0 +1,10 @@
+# Opens a link in the app. iOS asks "Open in…?" in a system alert Maestro can't see, so tap its button.
+appId: ${APP_ID}
+---
+- openLink: ${SCHEME}://${LINK}
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - waitForAnimationToEnd: { timeout: 1500 }
+      - tapOn: { point: "67%,54%" }
+- waitForAnimationToEnd: { timeout: 3000 }

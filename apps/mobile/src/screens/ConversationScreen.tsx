@@ -131,6 +131,7 @@ function Thread({ convo, onRetry }: { convo: Conversation; onRetry: () => void }
             <View style={styles.compose}>
               <TextInput
                 keyboardAppearance={keyboardAppearance}
+                testID="chat-input"
                 accessibilityLabel={t('chat.write')}
                 placeholder={t('chat.write')}
                 placeholderTextColor={c.placeholder}
@@ -146,6 +147,7 @@ function Thread({ convo, onRetry }: { convo: Conversation; onRetry: () => void }
                 style={[styles.input, { fontFamily: fontFor(lang, 500) }]}
               />
               <Pressy
+                testID="chat-send"
                 accessibilityLabel={t('chat.send')}
                 accessibilityState={{ disabled: !canSend }}
                 onPress={canSend ? submit : undefined}

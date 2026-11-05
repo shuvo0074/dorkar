@@ -1,8 +1,10 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Districts, Divisions } from '@dorkar/contracts/places';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useId, useMemo, useState, type ReactNode } from 'react';
 import {
   FlatList,
+  InputAccessoryView,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -97,6 +99,9 @@ export function TextField({
   testID?: string;
 }) {
   const { focusProps, style } = useFieldStyle(base.error);
+  // iOS number pads have no return key: give them a Done bar so the page underneath can be reached.
+  const accessoryId = useId();
+  const numberPad = Platform.OS === 'ios' && keyboard !== undefined && keyboard !== 'default';
   return (
     <FieldShell {...base}>
       <View style={styles.inputWrap}>
@@ -119,11 +124,30 @@ export function TextField({
           keyboardAppearance={keyboardAppearance}
           textAlignVertical={multiline ? 'top' : 'center'}
           style={[style, multiline && styles.multiline, prefix ? { paddingLeft: 44 } : null]}
+          {...(numberPad ? { inputAccessoryViewID: accessoryId } : {})}
           {...focusProps}
           {...inputProps}
         />
+        {numberPad ? <DoneBar id={accessoryId} /> : null}
       </View>
     </FieldShell>
+  );
+}
+
+function DoneBar({ id }: { id: string }) {
+  const { t } = useI18n();
+  return (
+    <InputAccessoryView nativeID={id}>
+      <View style={styles.doneBar}>
+        <Button
+          kind="link"
+          small
+          label={t('common.done')}
+          onPress={Keyboard.dismiss}
+          testID="keyboard-done"
+        />
+      </View>
+    </InputAccessoryView>
   );
 }
 
@@ -477,6 +501,13 @@ const styles = StyleSheet.create({
   inputFocus: { borderColor: c.accent, backgroundColor: c.fieldFocus },
   inputError: { borderColor: c.redInk },
   multiline: { minHeight: 112 },
+  doneBar: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 8,
+    backgroundColor: c.sheet,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: c.line,
+  },
   selectRow: {
     flexDirection: 'row',
     alignItems: 'center',

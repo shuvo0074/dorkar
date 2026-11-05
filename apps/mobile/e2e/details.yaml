@@ -1,0 +1,115 @@
+# Every detail page, and the main action on each. Needs the ids from scenario.mjs.
+appId: ${APP_ID}
+---
+- launchApp
+- extendedWaitUntil: { visible: { id: "tab-post" }, timeout: 60000 }
+# deal
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: deals/${DEAL}
+- scrollUntilVisible: { element: "Confirm the deal", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Confirm the deal"
+- extendedWaitUntil: { visible: "You; waiting for the other side", timeout: 20000 }
+- takeScreenshot: ${OUT}/deal
+# offer
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: offers/${OFFER}
+- scrollUntilVisible: { element: "Counter", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Counter"
+- extendedWaitUntil: { visible: "Your counter-offer", timeout: 20000 }
+- scrollUntilVisible: { element: "Send counter", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Send counter"
+- extendedWaitUntil: { visible: "Waiting for them", timeout: 20000 }
+- takeScreenshot: ${OUT}/offer
+# conversation
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: messages/${CONVERSATION}
+- extendedWaitUntil: { visible: "Yes, it is still available.", timeout: 20000 }
+- tapOn: { id: "chat-input" }
+- waitForAnimationToEnd: { timeout: 2000 }
+- inputText: "Is the battery original?"
+- tapOn: { id: "chat-send" }
+- extendedWaitUntil: { visible: "Is the battery original.*", timeout: 20000 }
+- tapOn: { id: "chat-input" }
+- waitForAnimationToEnd: { timeout: 2000 }
+- inputText: "Call me on 01712345678"
+- tapOn: { id: "chat-send" }
+- extendedWaitUntil: { visible: ".*(hone|contact).*", timeout: 20000 }
+- takeScreenshot: ${OUT}/conversation
+# dispute
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: disputes/${DISPUTE}
+- extendedWaitUntil: { visible: ".*crack.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/dispute
+# booking
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: bookings/${BOOKING}
+- scrollUntilVisible: { element: "Confirm.*", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Confirm.*"
+- waitForAnimationToEnd: { timeout: 4000 }
+- takeScreenshot: ${OUT}/booking
+# rental-settings
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: listings/${OWN_RENTAL}/rental
+- scrollUntilVisible: { element: "Save rental terms", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Save rental terms"
+- scrollUntilVisible: { element: "Rental terms saved.", direction: DOWN, speed: 80, timeout: 20000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- takeScreenshot: ${OUT}/rental-settings
+# loan
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: loans/${LOAN}
+- extendedWaitUntil: { visible: ".*ThinkPad.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/loan
+# lend-item
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: lend/${ITEM}
+- extendedWaitUntil: { visible: "E2E ThinkPad to borrow", timeout: 20000 }
+- takeScreenshot: ${OUT}/lend-item
+# auction
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: auctions/${AUCTION}
+- scrollUntilVisible: { element: "Your bid", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: { id: "bid" }
+- waitForAnimationToEnd: { timeout: 2000 }
+- eraseText: 20
+- inputText: "95000"
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - tapOn: { id: "keyboard-done" }
+- scrollUntilVisible: { element: "Place bid", direction: DOWN, speed: 80, timeout: 45000 }
+- waitForAnimationToEnd: { timeout: 2000 }
+- tapOn: "Place bid"
+- extendedWaitUntil: { visible: "Your bid: .*leading.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/auction
+# listing
+- runFlow:
+    file: open.yaml
+    env:
+      LINK: listings/${LISTING}
+- extendedWaitUntil: { visible: "E2E Pixel 7, boxed", timeout: 20000 }
+- takeScreenshot: ${OUT}/listing
