@@ -52,7 +52,14 @@ const styles = StyleSheet.create({
   },
   on: { backgroundColor: c.hot },
   off: { backgroundColor: c.ground },
-  icon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  icon: {
+    width: 36,
+    backgroundColor: 'transparent',
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   iconOn: { backgroundColor: 'rgba(255,255,255,0.28)' },
   name: { fontSize: 12.5 },
 });

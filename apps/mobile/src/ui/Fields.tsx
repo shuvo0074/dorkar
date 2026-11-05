@@ -524,6 +524,7 @@ const styles = StyleSheet.create({
   },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
+    backgroundColor: 'transparent',
     minHeight: 44,
     paddingHorizontal: 14,
     borderRadius: r.chip,
