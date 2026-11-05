@@ -1,0 +1,5 @@
+appId: ${APP_ID}
+---
+- inputText: ${CODE}
+- extendedWaitUntil: { notVisible: { id: "otp" }, timeout: 20000 }
+- takeScreenshot: ${OUT}/signed-in

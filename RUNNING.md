@@ -78,6 +78,16 @@ pnpm e2e:phase2
 cd apps/web && E2E_SMS_LOG=../../var/dev-sms.log pnpm e2e
 ```
 
+### Phone apps
+
+```bash
+cd apps/mobile && npm install && (cd ios && pod install)
+npm start          # Metro, in its own terminal
+npm run ios        # or: npm run android
+```
+
+Details: [apps/mobile/README.md](apps/mobile/README.md).
+
 ### Lint and typecheck
 
 ```bash
