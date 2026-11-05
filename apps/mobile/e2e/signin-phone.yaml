@@ -1,0 +1,10 @@
+appId: ${APP_ID}
+---
+- launchApp
+- extendedWaitUntil: { visible: { id: "tab-Account" }, timeout: 60000 }
+- tapOn: { id: "tab-Account" }
+- tapOn: { id: "phone" }
+- inputText: ${PHONE}
+- tapOn: { point: "50%,18%" }
+- tapOn: { id: "send" }
+- extendedWaitUntil: { visible: { id: "otp" }, timeout: 20000 }

@@ -1,0 +1,35 @@
+import type { MessageKey } from '../lib/i18n';
+import type { RouteName, TabParams } from './routes';
+
+/** The header's words for each stack page; a page may override with navigation.setOptions. */
+export const titleKeys: Partial<Record<RouteName | keyof TabParams, MessageKey>> = {
+  Inbox: 'nav.inbox',
+  Dashboard: 'nav.dashboard',
+  Account: 'nav.account',
+  SignIn: 'nav.signIn',
+  Needs: 'nav.needs',
+  Need: 'nav.needs',
+  NeedForm: 'needForm.title',
+  OfferForm: 'offerForm.title',
+  MyNeeds: 'myNeeds.title',
+  MyOffers: 'myOffers.title',
+  Deals: 'deals.title',
+  Deal: 'nav.deals',
+  Listings: 'nav.listings',
+  LendItems: 'nav.lend',
+  Auctions: 'nav.auctions',
+  Messages: 'nav.messages',
+  NotificationSettings: 'prefs.title',
+  ProfileSettings: 'me.title',
+  Disputes: 'disputes.title',
+  Listing: 'nav.listings',
+  MyListings: 'myListings.title',
+  RentalSettings: 'rterms.title',
+  Bookings: 'bookings.title',
+  Booking: 'bookings.title',
+  LendItem: 'lend.title',
+  Loans: 'loans.title',
+  Loan: 'loans.title',
+  Auction: 'auctions.title',
+  MyAuctions: 'myAuctions.title',
+};

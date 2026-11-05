@@ -1,0 +1,12 @@
+appId: ${APP_ID}
+---
+- launchApp
+- extendedWaitUntil: { visible: { id: "post" }, timeout: 60000 }
+- tapOn: { id: "lang" }
+- assertVisible: "কী দরকার?"
+- tapOn: { id: "lang" }
+- assertVisible: "What do you need?"
+- tapOn: "Browse listings"
+- extendedWaitUntil: { visible: ".*৳.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/listings
+- tapOn: { id: "back" }

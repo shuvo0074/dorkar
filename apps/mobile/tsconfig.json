@@ -1,0 +1,19 @@
+{
+  "extends": "@react-native/typescript-config",
+  "compilerOptions": {
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@web/*": ["../web/src/*"],
+      "@dorkar/contracts": ["../../packages/contracts/src/index.ts"],
+      "@dorkar/contracts/authz": ["../../packages/contracts/src/authz.ts"],
+      "@dorkar/contracts/places": ["../../packages/contracts/src/places.ts"],
+      "react": ["./node_modules/@types/react"],
+      "react/*": ["./node_modules/@types/react/*"],
+      "zod": ["./node_modules/zod"],
+      "@tanstack/react-query": ["./node_modules/@tanstack/react-query"]
+    }
+  },
+  "include": ["src", "index.js", "__tests__"],
+  "exclude": ["**/node_modules", "**/Pods"]
+}

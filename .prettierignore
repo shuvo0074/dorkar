@@ -6,3 +6,4 @@ infra/docker/compose.yml
 test-results
 infra/docker/observability/prometheus.yml
 .claude
+apps/mobile
