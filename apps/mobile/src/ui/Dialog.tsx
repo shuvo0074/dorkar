@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { c, r } from '../design/tokens';
 import { useI18n } from '../lib/i18n';
@@ -22,13 +22,19 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} accessibilityLabel={t('common.cancel')} onPress={onClose} />
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-        <T v="section" accessibilityRole="header">
-          {title}
-        </T>
-        {children}
-      </View>
+      <KeyboardAvoidingView behavior="padding" style={styles.fill}>
+        <Pressable
+          style={styles.overlay}
+          accessibilityLabel={t('common.cancel')}
+          onPress={onClose}
+        />
+        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+          <T v="section" accessibilityRole="header">
+            {title}
+          </T>
+          {children}
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -73,6 +79,7 @@ export function Confirm({
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   overlay: { flex: 1, backgroundColor: c.overlay },
   sheet: {
     backgroundColor: c.sheet,

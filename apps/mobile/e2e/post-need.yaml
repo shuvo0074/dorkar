@@ -4,8 +4,21 @@ appId: ${APP_ID}
 - extendedWaitUntil: { visible: { id: "tab-post" }, timeout: 60000 }
 - tapOn: { id: "tab-Home" }
 - tapOn: { id: "tab-post" }
-- inputText: "Used bicycle for my son"
+- eraseText: 80
+- inputText: ${TITLE}
 - tapOn: { point: "50%,18%" }
 - tapOn: { id: "post" }
-- extendedWaitUntil: { visible: "Category.*", timeout: 15000 }
+- extendedWaitUntil: { visible: "Choose a category", timeout: 15000 }
 - takeScreenshot: ${OUT}/need-form
+- tapOn: "Choose a category"
+- tapOn: ".*Mobile phones.*"
+- scrollUntilVisible: { element: "Choose a district", direction: DOWN, speed: 80, timeout: 90000 }
+- tapOn: "Choose a district"
+- tapOn: "Type to filter"
+- inputText: "Dhaka"
+- takeScreenshot: ${OUT}/district-filter
+- tapOn: { text: "Dhaka", index: 2 }
+- scrollUntilVisible: { element: "Publish need", direction: DOWN, speed: 80, timeout: 90000 }
+- tapOn: "Publish need"
+- extendedWaitUntil: { visible: "About this need|Open|Offers.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/need-published

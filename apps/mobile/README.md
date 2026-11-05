@@ -40,4 +40,8 @@ npm test
 ```
 
 `scripts/gen-icons.mjs` regenerates `src/ui/icons.tsx` from the web's icon set.
-`scripts/set-identity.py <slug> <name>` sets the bundle id, display name and link scheme.
+`scripts/set-identity.py <slug> <name> <ground>` sets the bundle id, display name, link scheme and
+launch screen colour; `scripts/make-icons.py` draws the app icons (needs Pillow).
+
+`e2e/run.sh <app id> <scheme>` drives the whole loop with [Maestro](https://maestro.dev): browse, sign
+in, post a need, receive an offer, accept it, see the deal.

@@ -3,6 +3,7 @@ import { Districts, Divisions } from '@dorkar/contracts/places';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   FlatList,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -183,55 +184,57 @@ export function SelectField({
         </View>
       </Pressable>
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <Pressable
-          style={styles.overlay}
-          accessibilityLabel={t('common.cancel')}
-          onPress={() => setOpen(false)}
-        />
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
-          <T v="section" accessibilityRole="header">
-            {base.label}
-          </T>
-          {options.length > 10 ? (
-            <TextInput
-              value={filter}
-              onChangeText={setFilter}
-              placeholder={t('common.filter')}
-              keyboardAppearance={keyboardAppearance}
-              placeholderTextColor={c.placeholder}
-              style={[styles.input, { fontFamily: fontFor(lang, 500) }]}
-            />
-          ) : null}
-          <FlatList
-            data={shown}
-            keyboardShouldPersistTaps="handled"
-            keyExtractor={(o) => o.value || '__empty'}
-            renderItem={({ item, index }) => (
-              <>
-                {item.group && item.group !== shown[index - 1]?.group ? (
-                  <T v="label" color={c.inkSoft} style={styles.group}>
-                    {item.group}
-                  </T>
-                ) : null}
-                <Pressable
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: item.value === value }}
-                  style={styles.option}
-                  onPress={() => {
-                    onChange(item.value);
-                    setOpen(false);
-                    setFilter('');
-                  }}
-                >
-                  <T style={styles.shrink} v={item.value === value ? 'bodyStrong' : 'body'}>
-                    {item.label}
-                  </T>
-                  {item.value === value ? <CheckIcon color={c.accent} size={20} /> : null}
-                </Pressable>
-              </>
-            )}
+        <KeyboardAvoidingView behavior="padding" style={styles.grow}>
+          <Pressable
+            style={styles.overlay}
+            accessibilityLabel={t('common.cancel')}
+            onPress={() => setOpen(false)}
           />
-        </View>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 12 }]}>
+            <T v="section" accessibilityRole="header">
+              {base.label}
+            </T>
+            {options.length > 10 ? (
+              <TextInput
+                value={filter}
+                onChangeText={setFilter}
+                placeholder={t('common.filter')}
+                keyboardAppearance={keyboardAppearance}
+                placeholderTextColor={c.placeholder}
+                style={[styles.input, { fontFamily: fontFor(lang, 500) }]}
+              />
+            ) : null}
+            <FlatList
+              data={shown}
+              keyboardShouldPersistTaps="handled"
+              keyExtractor={(o) => o.value || '__empty'}
+              renderItem={({ item, index }) => (
+                <>
+                  {item.group && item.group !== shown[index - 1]?.group ? (
+                    <T v="label" color={c.inkSoft} style={styles.group}>
+                      {item.group}
+                    </T>
+                  ) : null}
+                  <Pressable
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: item.value === value }}
+                    style={styles.option}
+                    onPress={() => {
+                      onChange(item.value);
+                      setOpen(false);
+                      setFilter('');
+                    }}
+                  >
+                    <T style={styles.shrink} v={item.value === value ? 'bodyStrong' : 'body'}>
+                      {item.label}
+                    </T>
+                    {item.value === value ? <CheckIcon color={c.accent} size={20} /> : null}
+                  </Pressable>
+                </>
+              )}
+            />
+          </View>
+        </KeyboardAvoidingView>
       </Modal>
     </FieldShell>
   );

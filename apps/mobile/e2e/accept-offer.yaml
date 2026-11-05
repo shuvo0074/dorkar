@@ -1,0 +1,16 @@
+appId: ${APP_ID}
+---
+- launchApp
+- extendedWaitUntil: { visible: { id: "tab-post" }, timeout: 60000 }
+- openLink: ${SCHEME}://offers/${OFFER}
+- tapOn: { text: "Open", optional: true }
+- extendedWaitUntil: { visible: "Accept offer", timeout: 20000 }
+- takeScreenshot: ${OUT}/offer
+- tapOn: "Accept offer"
+- tapOn: { text: "Yes, accept", index: 1 }
+- extendedWaitUntil: { visible: ".*Your deal is being set up.*", timeout: 20000 }
+- takeScreenshot: ${OUT}/accepted
+- openLink: ${SCHEME}://deals
+- tapOn: { text: "Open", optional: true }
+- extendedWaitUntil: { visible: "Deal T-.*", timeout: 30000 }
+- takeScreenshot: ${OUT}/deals
