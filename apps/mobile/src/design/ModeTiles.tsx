@@ -17,6 +17,7 @@ export function ModeTiles({ value, onChange }: { value: Mode; onChange: (m: Mode
         return (
           <View key={m} style={styles.cell}>
             <Pressy
+              key={on ? 'on' : 'off'}
               scale={0.94}
               testID={`mode-${m}`}
               accessibilityRole="radio"
@@ -25,7 +26,7 @@ export function ModeTiles({ value, onChange }: { value: Mode; onChange: (m: Mode
               onPress={() => onChange(m)}
               style={[styles.tile, on ? [styles.on, elevation.lift] : styles.off]}
             >
-              <View style={[styles.icon, on ? styles.iconOn : null]}>
+              <View key={on ? 'on' : 'off'} style={[styles.icon, on ? styles.iconOn : null]}>
                 <Icon size={20} color={on ? c.onHot : c.ink} />
               </View>
               <T v="code" numberOfLines={1} color={on ? c.onHot : c.ink} style={styles.name}>

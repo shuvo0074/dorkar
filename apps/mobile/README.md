@@ -44,4 +44,7 @@ npm test
 launch screen colour; `scripts/make-icons.py` draws the app icons (needs Pillow).
 
 `e2e/run.sh <app id> <scheme>` drives the whole loop with [Maestro](https://maestro.dev): browse, sign
-in, post a need, receive an offer, accept it, see the deal.
+in, post a need, receive an offer, accept it, see the deal. `e2e/details.sh <app id> <scheme>` builds a
+scenario through the API (a deal, an offer, a chat, a dispute, a booking, a rental, a loan, an
+auction) and checks each detail page and its main action. From a worktree, set `DORKAR_ROOT` to a
+checkout with `node_modules` and `SMS_LOG` to its `var/dev-sms.log`.

@@ -8,12 +8,12 @@ appId: ${APP_ID}
 - inputText: ${TITLE}
 - tapOn: { point: "50%,18%" }
 - tapOn: { id: "post" }
-- extendedWaitUntil: { visible: "Choose a category", timeout: 15000 }
+- extendedWaitUntil: { visible: ".*Choose a category.*", timeout: 15000 }
 - takeScreenshot: ${OUT}/need-form
-- tapOn: "Choose a category"
+- tapOn: ".*Choose a category.*"
 - tapOn: ".*Mobile phones.*"
-- scrollUntilVisible: { element: "Choose a district", direction: DOWN, speed: 80, timeout: 90000 }
-- tapOn: "Choose a district"
+- scrollUntilVisible: { element: ".*Choose a district.*", direction: DOWN, speed: 80, timeout: 90000 }
+- tapOn: ".*Choose a district.*"
 - tapOn: "Type to filter"
 - inputText: "Dhaka"
 - takeScreenshot: ${OUT}/district-filter
