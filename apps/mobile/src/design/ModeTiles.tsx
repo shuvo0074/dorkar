@@ -42,7 +42,7 @@ export function ModeTiles({ value, onChange }: { value: Mode; onChange: (m: Mode
         const Icon = modeIcon[m];
         return (
           <Pressable
-            key={m}
+            key={`${m}-${on ? 'on' : 'off'}`}
             testID={`mode-${m}`}
             accessibilityRole="radio"
             accessibilityState={{ checked: on }}
