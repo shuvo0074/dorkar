@@ -23,6 +23,7 @@ export function ModeTiles({ value, onChange }: { value: Mode; onChange: (m: Mode
         return (
           <View key={m} style={{ flex: !narrow && on ? 2.8 : 1 }}>
             <Pressy
+              key={on ? 'on' : 'off'}
               scale={0.93}
               testID={`mode-${m}`}
               accessibilityRole="radio"

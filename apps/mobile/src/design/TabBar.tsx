@@ -47,7 +47,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
         onPress={go}
         style={styles.tab}
       >
-        <View style={[styles.pill, on && styles.pillOn]}>
+        {/* Remounted when it changes: Android drops the corner radius when only the fill changes. */}
+        <View key={on ? 'on' : 'off'} style={[styles.pill, on && styles.pillOn]}>
           <Icon size={21} color={on ? c.primaryFg : c.inkSoft} />
           {badge ? (
             <View style={styles.count}>

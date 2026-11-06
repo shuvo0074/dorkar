@@ -407,7 +407,7 @@ export function CheckField({
       onPress={() => onChange(!value)}
       style={styles.check}
     >
-      <View style={[styles.box, value && styles.boxOn]}>
+      <View key={value ? 'on' : 'off'} style={[styles.box, value && styles.boxOn]}>
         {value ? <CheckIcon color={c.onBrand} size={16} /> : null}
       </View>
       <View style={styles.shrink}>
@@ -465,7 +465,8 @@ export function Chips({
     <View style={styles.chips} accessibilityRole="radiogroup" accessibilityLabel={label}>
       {options.map((o) => (
         <Pressable
-          key={o.value}
+          // Remounted on change: Android drops the corner radius when only the fill changes.
+          key={`${o.value}-${on(o.value) ? 'on' : 'off'}`}
           accessibilityRole={Array.isArray(value) ? 'checkbox' : 'radio'}
           accessibilityState={{ checked: on(o.value) }}
           onPress={() => onChange(o.value)}
